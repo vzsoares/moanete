@@ -1,5 +1,7 @@
 # moanete
 
+<!-- uv run moanete --device 0 --monitor pulse -v -->
+
 Offline-first meeting assistant — real-time transcription, LLM-powered insights, and Q&A.
 
 No audio, no screenshots, no transcripts, no queries ever leave your machine when running in Ollama mode.
