@@ -1,0 +1,45 @@
+[project]
+name = "moanete"
+version = "0.1.0"
+description = "Offline-first meeting assistant — real-time transcription, insights, and Q&A"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = [
+    "faster-whisper>=1.0.0",
+    "sounddevice>=0.4.6",
+    "numpy>=1.24",
+    "textual>=0.50.0",
+    "httpx>=0.27.0",
+]
+
+[project.optional-dependencies]
+cloud = ["anthropic>=0.25.0"]
+all = ["moanete[cloud]"]
+
+[project.scripts]
+moanete = "moanete.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/moanete"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ty.environment]
+extra-paths = ["src"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.8",
+    "ty>=0.0.26",
+]
