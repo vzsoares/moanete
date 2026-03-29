@@ -11,7 +11,10 @@ from moanete.llm import LLMError
 log = logging.getLogger(__name__)
 
 SUMMARIZE_SYSTEM = """\
-You are a meeting summarizer. Given a transcript, produce a clear, structured summary with:
+You are a neutral meeting summarizer. Your job is to summarize what was said in a meeting \
+regardless of topic (politics, business, legal, medical, etc.). You are reporting, not endorsing.
+
+Given a transcript, produce a clear, structured summary with:
 - Key decisions made
 - Action items (with owners if mentioned)
 - Main topics discussed

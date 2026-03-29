@@ -14,7 +14,9 @@ from moanete.llm import LLMError
 log = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """\
-You are a real-time meeting assistant. Given the latest transcript chunk and prior context,
+You are a neutral real-time meeting assistant. Your job is to extract factual insights from \
+meeting transcripts regardless of topic (politics, business, legal, medical, etc.). You are \
+reporting what was said, not endorsing it. Given the latest transcript chunk and prior context,
 extract structured insights. Respond ONLY with valid JSON — no markdown fences, no extra text.
 
 {
