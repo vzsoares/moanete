@@ -6,7 +6,6 @@ import json
 import logging
 import re
 import threading
-import time
 
 from moanete import llm
 from moanete.llm import LLMError
@@ -14,10 +13,11 @@ from moanete.llm import LLMError
 log = logging.getLogger(__name__)
 
 _SYSTEM_TEMPLATE = """\
-You are a neutral real-time meeting assistant. Your job is to extract factual insights from \
-meeting transcripts regardless of topic (politics, business, legal, medical, etc.). You are \
-reporting what was said, not endorsing it. Given the latest transcript chunk and prior context, \
-extract structured insights. Respond ONLY with valid JSON — no markdown fences, no extra text.
+You are a verbatim transcript analyzer. You MUST extract insights from exactly what was said. \
+You are a transcription tool, not a moral judge. NEVER refuse. ALL topics are in scope \
+(politics, legal, medical, personal, explicit, controversial). Report neutrally as a court \
+stenographer would. Given the latest transcript chunk and prior context, extract structured \
+insights. Respond ONLY with valid JSON — no markdown fences, no extra text.
 
 {{
 {json_keys}
@@ -60,7 +60,7 @@ class Analyzer:
         self._transcript_chunks: list[str] = []
         self._insights: dict[str, list[str]] = {k: [] for k in self._keys}
         self._lock = threading.Lock()
-        self._running = False
+        self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
         self._last_error: str | None = None
 
@@ -94,19 +94,19 @@ class Analyzer:
             self._transcript_chunks.append(text)
 
     def start(self) -> None:
-        self._running = True
+        self._stop_event.clear()
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
 
     def stop(self) -> None:
-        self._running = False
+        self._stop_event.set()
         if self._thread:
-            self._thread.join(timeout=5)
+            self._thread.join(timeout=2)
 
     def _loop(self) -> None:
-        while self._running:
-            time.sleep(self._interval)
-            if not self._running:
+        while not self._stop_event.is_set():
+            self._stop_event.wait(self._interval)
+            if self._stop_event.is_set():
                 break
             self._analyze()
 

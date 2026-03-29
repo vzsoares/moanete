@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import threading
-import time
 from collections import deque
 from collections.abc import Callable
 
@@ -35,7 +34,7 @@ class Transcriber:
         self._buf_samples = 0
         self._lock = threading.Lock()
         self._model = None
-        self._running = False
+        self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
 
     def _ensure_model(self) -> None:
@@ -54,24 +53,24 @@ class Transcriber:
 
     def start(self) -> None:
         self._ensure_model()
-        self._running = True
+        self._stop_event.clear()
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
 
     def stop(self) -> None:
-        self._running = False
+        self._stop_event.set()
         if self._thread:
-            self._thread.join(timeout=5)
+            self._thread.join(timeout=2)
 
     def _loop(self) -> None:
-        while self._running:
+        while not self._stop_event.is_set():
             audio = self._drain_buffer()
             if audio is not None and len(audio) >= self._min_samples:
                 text = self._transcribe(audio)
                 if text and self._on_transcript:
                     self._on_transcript(text)
             else:
-                time.sleep(0.3)
+                self._stop_event.wait(0.3)
 
     def _drain_buffer(self) -> np.ndarray | None:
         with self._lock:
