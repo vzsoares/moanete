@@ -33,8 +33,11 @@ def summarize_transcript(transcript: str, max_tokens: int = 1024) -> str:
     return llm.chat(messages, system=SUMMARIZE_SYSTEM, max_tokens=max_tokens)
 
 
+_MAX_WIDTH = 1920
+
+
 def capture_screen() -> bytes | None:
-    """Take a screenshot of the primary monitor. Returns PNG bytes or None."""
+    """Take a screenshot of the primary monitor, downscaled to max 1920px wide. Returns PNG bytes or None."""
     try:
         import mss
         from mss.tools import to_png
@@ -46,6 +49,18 @@ def capture_screen() -> bytes | None:
         with mss.mss() as sct:
             monitor = sct.monitors[1]  # primary monitor
             shot = sct.grab(monitor)
+            w, h = shot.size
+            if w > _MAX_WIDTH:
+                import numpy as np
+
+                img = np.frombuffer(shot.rgb, dtype=np.uint8).reshape((h, w, 3))
+                scale = _MAX_WIDTH / w
+                new_h = int(h * scale)
+                # Simple stride-based downscale (fast, no extra deps)
+                rows = np.linspace(0, h - 1, new_h, dtype=int)
+                cols = np.linspace(0, w - 1, _MAX_WIDTH, dtype=int)
+                img = img[np.ix_(rows, cols)]
+                return to_png(img.tobytes(), (_MAX_WIDTH, new_h))
             return to_png(shot.rgb, shot.size)
     except Exception:
         log.exception("Screenshot capture failed")

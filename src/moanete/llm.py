@@ -81,8 +81,9 @@ def _ollama_describe_image(base64_png: str, prompt: str) -> str:
             f"Vision model '{model}' not found. Pull it with: ollama pull {model}\n"
             "Screen description will be skipped."
         )
+    if r.status_code >= 400:
+        raise LLMError(f"Ollama vision error ({r.status_code}): {r.text[:200]}")
 
-    r.raise_for_status()
     return r.json()["message"]["content"]
 
 
