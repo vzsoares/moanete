@@ -347,9 +347,20 @@ class MoaneteApp(App):
         with a._lock:
             a._insights = {k: [] for k in a._keys}
 
-        # Rebuild top-bar widget
+        # Rebuild top-bar: must be async to properly remove+mount
+        self._rebuild_top_bar(categories)
+
+        # Save to config file
+        cfg = config.load_config()
+        cfg["INSIGHT_TABS"] = ",".join(categories)
+        config.save_config(cfg)
+
+        log.info("Insight tabs changed to: %s", categories)
+
+    @work
+    async def _rebuild_top_bar(self, categories: list[str]) -> None:
         top_bar = self.query_one("#top-bar", TabbedContent)
-        top_bar.remove()
+        await top_bar.remove()
 
         new_top = TabbedContent(id="top-bar")
         for name in categories:
@@ -358,16 +369,9 @@ class MoaneteApp(App):
             pane.compose_add_child(RichLog(id=f"{key}-log", wrap=True, markup=True))
             new_top.compose_add_child(pane)
 
-        self.mount(new_top, after=self.query_one("#live-transcript"))
+        await self.mount(new_top, after=self.query_one("#live-transcript"))
         self._apply_sizes()
         self._check_compact()
-
-        # Save to config file
-        cfg = config.load_config()
-        cfg["INSIGHT_TABS"] = ",".join(categories)
-        config.save_config(cfg)
-
-        log.info("Insight tabs changed to: %s", categories)
 
     def _apply_language(self, language: str) -> None:
         """Update the transcriber language live."""
