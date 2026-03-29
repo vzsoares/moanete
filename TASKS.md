@@ -15,16 +15,30 @@
 
 ### Screen capture not working
 - [x] Implement screenshot capture using `mss` (optional dep: `moanete[screen]`)
-- [x] Add `capture_screen()` in `summarize.py` — grabs primary monitor as PNG
+- [x] Add `capture_screen()` in `summarize.py` — grabs primary monitor, downscaled to 800px
 - [x] Wire screenshot capture into the overlay (`d` keybinding)
 - [x] Graceful fallback when `mss` not installed or vision model unavailable
-- [ ] Test with llava model pulled / not pulled (graceful fallback)
+- [x] Fix llava OOM crash — switched default to `moondream` (1.6B, ~1GB VRAM)
+- [x] Auto-unload text model before vision request to free VRAM
+- [x] Show actual vision error in Summary tab instead of generic message
 
 ### STT quality is bad
 - [x] Add VAD (Voice Activity Detection) filtering — `vad_filter=True` with silero, 500ms silence threshold
 - [x] Add language auto-detection or make language configurable (`WHISPER_LANGUAGE`)
 - [x] Tune `beam_size` (default 1→5, configurable via `WHISPER_BEAM_SIZE`)
 - [x] ~~Remaining items~~ — STT quality confirmed good enough with current setup
+
+### UI enhancements (added during Phase 1)
+- [x] Configurable background opacity (`BG_OPACITY`)
+- [x] Responsive layout — insight panels auto-hide below 20 lines
+- [x] Insight panels refactored to top TabbedContent (dynamic, configurable)
+- [x] Configurable insight categories via `INSIGHT_TABS` with presets (Meeting, Code Interview, Pair Programming, Lecture)
+- [x] In-app config modal (`c` key) — change tabs + whisper language live, saves to config.env
+- [x] Configurable theme (`THEME`, default: catppuccin-mocha)
+- [x] Vim-style navigation: `j`/`k` top/bottom bars, `h`/`l` cycle tabs, `i` enter chat, `Esc` exit chat
+- [x] Configurable tab heights (`TOP_BAR_HEIGHT`, `BOTTOM_BAR_HEIGHT`)
+- [x] Hardened LLM prompts — "court stenographer" framing, never refuses any topic
+- [x] Clean shutdown — `threading.Event` instead of `time.sleep` for instant stop
 
 ---
 

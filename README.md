@@ -107,21 +107,20 @@ Type in the chat input to ask questions about the meeting.
 
 ```
   Microphone ─┐
-               ├─► Audio Capture ──► faster-whisper (STT) ──► Transcript
+               ├─► Audio Capture ──► faster-whisper (STT+VAD) ──► Transcript
   System Audio ┘        │
                          └──► LLM Analyzer (every ~15s) ──► Insights
                                      │
-                              ┌──────┴──────┐
-                              │  TUI Overlay │
-                              │  ┌─────────┐ │
-                              │  │Suggestions│ │
-                              │  │Key Points│ │
-                              │  │Actions   │ │
-                              │  │Questions │ │
-                              │  ├─────────┤ │
-                              │  │Chat / Q&A│ │
-                              │  └─────────┘ │
-                              └─────────────┘
+                    ┌────────────────────────────────┐
+                    │          TUI Overlay            │
+                    │  ┏━ Live Transcript ━━━━━━━━━┓  │
+                    │  ┃ rolling last 300 chars...  ┃  │
+                    │  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━┛  │
+                    │  [Suggestions|Key Points|...]   │ ← configurable
+                    │  ──────────────────────────────  │
+                    │  [Transcript|Chat|Summary|Log]  │
+                    │  ──────────────────────────────  │
+                    └────────────────────────────────┘
 ```
 
 1. **Audio capture** — records from your microphone and optionally system audio via `sounddevice`, with automatic sample rate conversion
@@ -129,7 +128,7 @@ Type in the chat input to ask questions about the meeting.
 3. **Analysis** — every ~15s the LLM extracts suggestions, key points, action items, and questions
 4. **Overlay** — a terminal UI shows insights in real-time with live transcript and chat for Q&A
 5. **Summaries** — press `s` to generate a structured meeting summary on demand
-6. **Vision** — optional screen description via `llava` (if pulled)
+6. **Vision** — optional screen description via `moondream` (if pulled), auto-unloads text model to free VRAM
 
 ## Model Recommendations
 
@@ -157,7 +156,7 @@ Config is stored in `~/.config/moanete/config.env`. Available settings:
 | `LLM_BACKEND`        | `ollama`                  | `ollama` or `anthropic`              |
 | `OLLAMA_HOST`        | `http://localhost:11434`  | Ollama server URL                    |
 | `OLLAMA_MODEL`       | `llama3.2`                | Text model for analysis/chat         |
-| `OLLAMA_VISION_MODEL`| `llava`                   | Vision model for screen description  |
+| `OLLAMA_VISION_MODEL`| `moondream`               | Vision model for screen description  |
 | `ANTHROPIC_API_KEY`  | *(empty)*                 | Required only if backend=anthropic   |
 | `WHISPER_MODEL`      | `base`                    | faster-whisper model size            |
 | `WHISPER_LANGUAGE`   | *(auto-detect)*           | Language code (e.g. `en`, `pt`, `es`)|
@@ -187,6 +186,14 @@ WHISPER_MODEL=small OLLAMA_MODEL=mistral moanete
 
 ```sh
 INSIGHT_TABS="Bugs,Design Decisions,TODOs,Questions" moanete
+```
+
+### Available themes
+
+`catppuccin-mocha` (default), `catppuccin-latte`, `catppuccin-frappe`, `catppuccin-macchiato`, `nord`, `gruvbox`, `dracula`, `tokyo-night`, `monokai`, `rose-pine`, `solarized-dark`, `solarized-light`, `atom-one-dark`, `flexoki`, `textual-dark`, `textual-light`, `textual-ansi`
+
+```sh
+THEME=dracula moanete
 ```
 
 ## Development
