@@ -153,6 +153,7 @@ Config is stored in `~/.config/moanete/config.env`. Available settings:
 | `WHISPER_MODEL`      | `base`                    | faster-whisper model size            |
 | `WHISPER_LANGUAGE`   | *(auto-detect)*           | Language code (e.g. `en`, `pt`, `es`)|
 | `WHISPER_BEAM_SIZE`  | `5`                       | Beam size (higher = better, slower)  |
+| `BG_OPACITY`         | `1.0`                     | Background opacity (0.0–1.0)         |
 | `AUDIO_DEVICE`       | *(auto)*                  | Microphone device index/name         |
 | `MONITOR_DEVICE`     | *(empty)*                 | System audio: `auto`, index, or empty|
 

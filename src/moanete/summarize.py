@@ -37,7 +37,7 @@ _MAX_WIDTH = 1920
 
 
 def capture_screen() -> bytes | None:
-    """Take a screenshot of the primary monitor, downscaled to max 1920px wide. Returns PNG bytes or None."""
+    """Take a screenshot of the primary monitor, downscaled to max 1920px wide."""
     try:
         import mss
         from mss.tools import to_png

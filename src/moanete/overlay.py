@@ -8,16 +8,20 @@ from typing import TYPE_CHECKING, ClassVar
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal
-from textual.widgets import Footer, Header, Input, RichLog, Static, TabbedContent, TabPane
+from textual.color import Color
+from textual.containers import Horizontal, VerticalScroll
+from textual.widgets import Footer, Input, RichLog, Static, TabbedContent, TabPane
 
-from moanete import llm
+from moanete import config, llm
 from moanete.llm import LLMError
 
 if TYPE_CHECKING:
     from moanete.analyzer import Analyzer
 
 log = logging.getLogger(__name__)
+
+# Height threshold: below this, insight panels are hidden
+_COMPACT_HEIGHT = 30
 
 
 class _TUILogHandler(logging.Handler):
@@ -86,11 +90,20 @@ class MoaneteApp(App):
 
     TITLE = "moanete"
     CSS = """
+    Screen {
+        padding: 0;
+    }
+
     #live-transcript {
         height: auto;
-        max-height: 5;
+        max-height: 3;
         border: heavy $accent;
         padding: 0 1;
+    }
+
+    #insights-scroll {
+        height: auto;
+        max-height: 50%;
     }
 
     .insights-row {
@@ -98,16 +111,16 @@ class MoaneteApp(App):
         grid-size: 2;
         grid-gutter: 1;
         height: auto;
-        max-height: 12;
+        max-height: 8;
     }
 
     InsightPanel {
         border: round $primary;
-        padding: 1;
+        padding: 0 1;
     }
 
     #bottom-bar {
-        height: 2fr;
+        height: 1fr;
     }
 
     #chat-input {
@@ -129,16 +142,17 @@ class MoaneteApp(App):
         self._log_handler = _TUILogHandler()
         fmt = "%(asctime)s %(name)s %(levelname)s: %(message)s"
         self._log_handler.setFormatter(logging.Formatter(fmt))
+        self._compact = False
 
     def compose(self) -> ComposeResult:
-        yield Header()
         yield Static("[bold]Transcript[/] [dim]listening...[/]", id="live-transcript")
-        with Horizontal(classes="insights-row"):
-            yield InsightPanel("Suggestions", id="suggestions")
-            yield InsightPanel("Key Points", id="key-points")
-        with Horizontal(classes="insights-row"):
-            yield InsightPanel("Action Items", id="action-items")
-            yield InsightPanel("Questions", id="questions")
+        with VerticalScroll(id="insights-scroll"):
+            with Horizontal(classes="insights-row"):
+                yield InsightPanel("Suggestions", id="suggestions")
+                yield InsightPanel("Key Points", id="key-points")
+            with Horizontal(classes="insights-row"):
+                yield InsightPanel("Action Items", id="action-items")
+                yield InsightPanel("Questions", id="questions")
         with TabbedContent(id="bottom-bar"):
             with TabPane("Transcript", id="transcript-tab"):
                 yield RichLog(id="transcript-log", wrap=True, markup=True)
@@ -156,6 +170,32 @@ class MoaneteApp(App):
         self._log_handler.set_widget(log_widget)
         logging.getLogger().addHandler(self._log_handler)
         self.set_interval(2.0, self._refresh_insights)
+        self._apply_opacity()
+        self._check_compact()
+
+    def _apply_opacity(self) -> None:
+        """Apply background opacity from config."""
+        raw = config.get("BG_OPACITY")
+        try:
+            alpha = float(raw) if raw else 1.0
+        except ValueError:
+            alpha = 1.0
+        alpha = max(0.0, min(1.0, alpha))
+        if alpha < 1.0:
+            bg = Color(18, 18, 18, alpha)
+            self.styles.background = bg
+            for widget in self.query("InsightPanel, #live-transcript, #bottom-bar, RichLog"):
+                widget.styles.background = bg
+
+    def on_resize(self) -> None:
+        self._check_compact()
+
+    def _check_compact(self) -> None:
+        """Hide insight panels when terminal is too small."""
+        compact = self.size.height < _COMPACT_HEIGHT
+        if compact != self._compact:
+            self._compact = compact
+            self.query_one("#insights-scroll").display = not compact
 
     def _refresh_insights(self) -> None:
         insights = self._analyzer.insights

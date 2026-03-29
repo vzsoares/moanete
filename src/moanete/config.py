@@ -21,6 +21,7 @@ DEFAULTS: dict[str, str] = {
     "WHISPER_MODEL": "base",
     "WHISPER_LANGUAGE": "",
     "WHISPER_BEAM_SIZE": "5",
+    "BG_OPACITY": "1.0",
     "AUDIO_DEVICE": "",
     "MONITOR_DEVICE": "",
 }
