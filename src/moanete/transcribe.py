@@ -19,11 +19,15 @@ class Transcriber:
     def __init__(
         self,
         model_size: str = "base",
+        language: str | None = None,
+        beam_size: int = 5,
         on_transcript: Callable[[str], None] | None = None,
         min_audio_s: float = 3.0,
         max_audio_s: float = 30.0,
     ) -> None:
         self._model_size = model_size
+        self._language = language  # None = auto-detect
+        self._beam_size = beam_size
         self._on_transcript = on_transcript
         self._min_samples = int(min_audio_s * 16_000)
         self._max_samples = int(max_audio_s * 16_000)
@@ -84,6 +88,15 @@ class Transcriber:
 
     def _transcribe(self, audio: np.ndarray) -> str:
         assert self._model is not None
-        segments, _ = self._model.transcribe(audio, beam_size=1, language="en")
+        segments, info = self._model.transcribe(
+            audio,
+            beam_size=self._beam_size,
+            language=self._language,
+            vad_filter=True,
+            vad_parameters={"min_silence_duration_ms": 500},
+        )
+        if self._language is None and info.language_probability > 0.5:
+            prob = info.language_probability * 100
+            log.debug("Detected language: %s (%.0f%%)", info.language, prob)
         parts = [seg.text.strip() for seg in segments if seg.text.strip()]
         return " ".join(parts)

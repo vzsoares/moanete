@@ -19,6 +19,8 @@ DEFAULTS: dict[str, str] = {
     "OLLAMA_VISION_MODEL": "llava",
     "ANTHROPIC_API_KEY": "",
     "WHISPER_MODEL": "base",
+    "WHISPER_LANGUAGE": "",
+    "WHISPER_BEAM_SIZE": "5",
     "AUDIO_DEVICE": "",
     "MONITOR_DEVICE": "",
 }
@@ -127,8 +129,12 @@ def run_setup_wizard() -> None:
             "Vision model (for screen description)", DEFAULTS["OLLAMA_VISION_MODEL"]
         )
 
-    # 2. Whisper model
+    # 2. Whisper model and tuning
     cfg["WHISPER_MODEL"] = _ask("Whisper model (tiny/base/small/medium/large-v3)", "base")
+    lang = _ask("Whisper language (e.g. en, pt, es — leave blank for auto-detect)", "")
+    cfg["WHISPER_LANGUAGE"] = lang
+    beam = _ask("Beam size (higher = better accuracy, slower; 1-10)", "5")
+    cfg["WHISPER_BEAM_SIZE"] = beam
 
     # 3. Audio device selection
     try:

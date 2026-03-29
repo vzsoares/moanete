@@ -1,6 +1,6 @@
 # moanete
 
-<!-- uv run moanete --device 0 --monitor pulse -v -->
+<!-- uv run moanete --device default --monitor auto -v -->
 
 Offline-first meeting assistant — real-time transcription, LLM-powered insights, and Q&A.
 
@@ -28,8 +28,14 @@ ollama pull llama3.2 && ollama pull llava
 # Offline only (default — no cloud dependencies)
 uv tool install git+https://github.com/vzsoares/moanete
 
+# With screen capture support
+uv tool install git+https://github.com/vzsoares/moanete --extra screen
+
 # With cloud fallback (Anthropic Claude)
 uv tool install git+https://github.com/vzsoares/moanete --extra cloud
+
+# Everything
+uv tool install git+https://github.com/vzsoares/moanete --extra all
 ```
 
 ### 4. Run
@@ -77,11 +83,12 @@ System audio monitors (use with --monitor auto):
 
 ### TUI keybindings
 
-| Key   | Action               |
-|-------|----------------------|
-| `s`   | Generate summary     |
-| `q`   | Quit                 |
-| `Tab` | Switch panel focus   |
+| Key   | Action                              |
+|-------|-------------------------------------|
+| `s`   | Generate summary                    |
+| `d`   | Describe screen (requires `mss`)    |
+| `q`   | Quit                                |
+| `Tab` | Switch panel focus                  |
 
 The TUI has four insight panels (suggestions, key points, action items, questions) and tabbed views for transcript, chat, summary, and logs.
 
@@ -109,7 +116,7 @@ Type in the chat input to ask questions about the meeting.
 ```
 
 1. **Audio capture** — records from your microphone and optionally system audio via `sounddevice`, with automatic sample rate conversion
-2. **Transcription** — on-device speech-to-text with `faster-whisper` (no audio leaves your machine)
+2. **Transcription** — on-device speech-to-text with `faster-whisper` and VAD filtering (no audio leaves your machine)
 3. **Analysis** — every ~15s the LLM extracts suggestions, key points, action items, and questions
 4. **Overlay** — a terminal UI shows insights in real-time with live transcript and chat for Q&A
 5. **Summaries** — press `s` to generate a structured meeting summary on demand
@@ -144,6 +151,8 @@ Config is stored in `~/.config/moanete/config.env`. Available settings:
 | `OLLAMA_VISION_MODEL`| `llava`                   | Vision model for screen description  |
 | `ANTHROPIC_API_KEY`  | *(empty)*                 | Required only if backend=anthropic   |
 | `WHISPER_MODEL`      | `base`                    | faster-whisper model size            |
+| `WHISPER_LANGUAGE`   | *(auto-detect)*           | Language code (e.g. `en`, `pt`, `es`)|
+| `WHISPER_BEAM_SIZE`  | `5`                       | Beam size (higher = better, slower)  |
 | `AUDIO_DEVICE`       | *(auto)*                  | Microphone device index/name         |
 | `MONITOR_DEVICE`     | *(empty)*                 | System audio: `auto`, index, or empty|
 

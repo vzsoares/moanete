@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import contextlib
 import logging
 from typing import TYPE_CHECKING, ClassVar
 
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
+from textual.containers import Horizontal
 from textual.widgets import Footer, Header, Input, RichLog, Static, TabbedContent, TabPane
 
 from moanete import llm
@@ -80,56 +80,39 @@ class MoaneteApp(App):
 
     TITLE = "moanete"
     CSS = """
-    Screen {
-        layout: grid;
-        grid-size: 2;
-        grid-rows: auto 1fr 1fr 1fr;
-        grid-gutter: 1;
-        padding: 1;
-    }
-
     #live-transcript {
-        column-span: 2;
         height: auto;
         max-height: 5;
         border: heavy $accent;
         padding: 0 1;
-        overflow-y: auto;
     }
 
-    #suggestions { row-span: 1; }
-    #key-points { row-span: 1; }
-    #action-items { row-span: 1; }
-    #questions { row-span: 1; }
+    .insights-row {
+        layout: grid;
+        grid-size: 2;
+        grid-gutter: 1;
+        height: auto;
+        max-height: 12;
+    }
 
     InsightPanel {
         border: round $primary;
         padding: 1;
-        height: 100%;
     }
 
-    #transcript-tab, #chat-tab, #summary-tab {
-        height: 100%;
-    }
-
-    #chat-log {
-        height: 1fr;
+    #bottom-bar {
+        height: 2fr;
     }
 
     #chat-input {
         dock: bottom;
     }
-
-    #bottom-bar {
-        column-span: 2;
-        height: 100%;
-        min-height: 10;
-    }
     """
 
     BINDINGS: ClassVar[list[Binding]] = [
         Binding("q", "quit", "Quit"),
-        Binding("s", "summarize", "Summarize"),
+        Binding("s", "summarize", "Summarize", priority=False),
+        Binding("d", "describe_screen", "Describe screen", priority=False),
         Binding("tab", "focus_next", "Next panel", show=False),
     ]
 
@@ -144,10 +127,12 @@ class MoaneteApp(App):
     def compose(self) -> ComposeResult:
         yield Header()
         yield Static("[bold]Transcript[/] [dim]listening...[/]", id="live-transcript")
-        yield InsightPanel("Suggestions", id="suggestions")
-        yield InsightPanel("Key Points", id="key-points")
-        yield InsightPanel("Action Items", id="action-items")
-        yield InsightPanel("Questions", id="questions")
+        with Horizontal(classes="insights-row"):
+            yield InsightPanel("Suggestions", id="suggestions")
+            yield InsightPanel("Key Points", id="key-points")
+        with Horizontal(classes="insights-row"):
+            yield InsightPanel("Action Items", id="action-items")
+            yield InsightPanel("Questions", id="questions")
         with TabbedContent(id="bottom-bar"):
             with TabPane("Transcript", id="transcript-tab"):
                 yield RichLog(id="transcript-log", wrap=True, markup=True)
@@ -174,19 +159,22 @@ class MoaneteApp(App):
         self.query_one("#questions", InsightPanel).set_items(insights.questions)
 
         if err := self._analyzer.last_error:
-            self.query_one("#transcript-log", RichLog).write(f"[red]LLM: {err}[/]")
+            self.query_one("#log-output", RichLog).write(f"[red]LLM: {err}[/]")
 
     def append_transcript(self, text: str) -> None:
         """Called from the transcription pipeline to show new text."""
-        with contextlib.suppress(Exception):
+        try:
             self.query_one("#transcript-log", RichLog).write(text)
-        with contextlib.suppress(Exception):
+        except Exception:
+            log.debug("transcript-log not ready yet")
+        try:
             live = self.query_one("#live-transcript", Static)
-            # Show the last few transcript chunks as a rolling view
             current = self._analyzer.transcript
             tail = current[-300:] if len(current) > 300 else current
             prefix = "..." if len(current) > 300 else ""
             live.update(f"[bold]Transcript[/] {prefix}{tail}")
+        except Exception:
+            log.debug("live-transcript not ready yet")
 
     @on(Input.Submitted, "#chat-input")
     def _on_chat_submit(self, event: Input.Submitted) -> None:
@@ -244,3 +232,33 @@ class MoaneteApp(App):
 
         self.call_from_thread(summary_log.clear)
         self.call_from_thread(summary_log.write, summary)
+
+    def action_describe_screen(self) -> None:
+        self._run_describe_screen()
+
+    @work(thread=True)
+    def _run_describe_screen(self) -> None:
+        from moanete.summarize import capture_screen, describe_screen
+
+        summary_log = self.query_one("#summary-log", RichLog)
+        self.call_from_thread(summary_log.write, "[dim]Capturing screen...[/]")
+
+        png = capture_screen()
+        if not png:
+            self.call_from_thread(
+                summary_log.write,
+                "[yellow]Screenshot failed — is mss installed? (uv pip install moanete[screen])[/]",
+            )
+            return
+
+        self.call_from_thread(summary_log.write, "[dim]Describing screen with vision model...[/]")
+        description = describe_screen(png)
+        if description:
+            self.call_from_thread(
+                summary_log.write, f"[bold]Screen Description:[/]\n{description}"
+            )
+        else:
+            self.call_from_thread(
+                summary_log.write,
+                "[yellow]Vision model unavailable — screen description skipped.[/]",
+            )

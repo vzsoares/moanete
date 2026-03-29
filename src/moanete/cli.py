@@ -131,8 +131,13 @@ def _run(
         else:
             print(f"[transcript] {text}")
 
+    whisper_lang = cfg.get("WHISPER_LANGUAGE", "") or None
+    whisper_beam = int(cfg.get("WHISPER_BEAM_SIZE", "5"))
+
     transcriber = Transcriber(
         model_size=cfg.get("WHISPER_MODEL", "base"),
+        language=whisper_lang,
+        beam_size=whisper_beam,
         on_transcript=on_transcript,
     )
     capture = AudioCapture(on_chunk=transcriber.feed, device=device, monitor=monitor)

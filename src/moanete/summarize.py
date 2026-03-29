@@ -30,8 +30,35 @@ def summarize_transcript(transcript: str, max_tokens: int = 1024) -> str:
     return llm.chat(messages, system=SUMMARIZE_SYSTEM, max_tokens=max_tokens)
 
 
-def describe_screen(screenshot_png_bytes: bytes) -> str:
-    """Describe the contents of a screenshot. Returns empty string on failure."""
+def capture_screen() -> bytes | None:
+    """Take a screenshot of the primary monitor. Returns PNG bytes or None."""
+    try:
+        import mss
+        from mss.tools import to_png
+    except ImportError:
+        log.warning("mss not installed — install with: uv pip install moanete[screen]")
+        return None
+
+    try:
+        with mss.mss() as sct:
+            monitor = sct.monitors[1]  # primary monitor
+            shot = sct.grab(monitor)
+            return to_png(shot.rgb, shot.size)
+    except Exception:
+        log.exception("Screenshot capture failed")
+        return None
+
+
+def describe_screen(screenshot_png_bytes: bytes | None = None) -> str:
+    """Capture and describe the screen. Returns empty string on failure.
+
+    If screenshot_png_bytes is None, captures the screen automatically.
+    """
+    if screenshot_png_bytes is None:
+        screenshot_png_bytes = capture_screen()
+    if not screenshot_png_bytes:
+        return ""
+
     try:
         b64 = base64.b64encode(screenshot_png_bytes).decode("ascii")
         return llm.describe_image(b64, "Describe what is shown on this screen in detail.")

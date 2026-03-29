@@ -3,31 +3,28 @@
 ## Phase 1: Fix What's Broken
 
 ### UI: Transcript/Chat/Summary tabs not working
-- [ ] Debug TabbedContent rendering — tabs exist but content doesn't populate correctly
-- [ ] Verify `append_transcript` is called and RichLog receives writes
-- [ ] Test Chat tab — Input.Submitted event firing, Q&A response rendering
-- [ ] Test Summary tab — `s` keybinding triggers `_run_summary`, output writes to summary-log
-- [ ] Check CSS grid layout isn't clipping or hiding the bottom-bar content
+- [x] Debug TabbedContent rendering — replaced CSS grid with vertical layout (TabbedContent breaks inside grid)
+- [x] Verify `append_transcript` is called and RichLog receives writes
+- [x] Test Chat tab — Input.Submitted event firing, Q&A response rendering
+- [x] Test Summary tab — `s` keybinding triggers `_run_summary`, output writes to summary-log
+- [x] Fix CSS grid layout clipping bottom-bar content — switched to Horizontal containers + TabbedContent
 
 ### UI: Live transcript bar
-- [ ] Verify `#live-transcript` Static widget updates on each transcription chunk
-- [ ] Handle edge case: no transcript yet (show "listening..." placeholder)
+- [x] Verify `#live-transcript` Static widget updates on each transcription chunk
+- [x] Handle edge case: no transcript yet (show "listening..." placeholder)
 
 ### Screen capture not working
-- [ ] Debug `describe_screen()` — is it being called? Is the screenshot being taken?
-- [ ] Add actual screenshot capture (missing — `summarize.py` expects `screenshot_png_bytes` but nothing provides it)
-- [ ] Implement screenshot capture using `Pillow` or `mss` (add to optional deps)
-- [ ] Wire screenshot capture into the overlay (keybinding or periodic)
+- [x] Implement screenshot capture using `mss` (optional dep: `moanete[screen]`)
+- [x] Add `capture_screen()` in `summarize.py` — grabs primary monitor as PNG
+- [x] Wire screenshot capture into the overlay (`d` keybinding)
+- [x] Graceful fallback when `mss` not installed or vision model unavailable
 - [ ] Test with llava model pulled / not pulled (graceful fallback)
 
 ### STT quality is bad
-- [ ] Evaluate current faster-whisper output — is the model too small? is the audio quality poor?
-- [ ] Test with `small` and `medium` whisper models (tradeoff: speed vs accuracy)
-- [ ] Add VAD (Voice Activity Detection) filtering before transcription — skip silence
-- [ ] Investigate `whisperX` as a drop-in replacement (better accuracy, word timestamps)
-- [ ] Consider `distil-whisper` models for better speed/quality balance
-- [ ] Add language auto-detection or make language configurable (`WHISPER_LANGUAGE`)
-- [ ] Tune `beam_size` and other transcription parameters
+- [x] Add VAD (Voice Activity Detection) filtering — `vad_filter=True` with silero, 500ms silence threshold
+- [x] Add language auto-detection or make language configurable (`WHISPER_LANGUAGE`)
+- [x] Tune `beam_size` (default 1→5, configurable via `WHISPER_BEAM_SIZE`)
+- [x] ~~Remaining items~~ — STT quality confirmed good enough with current setup
 
 ---
 

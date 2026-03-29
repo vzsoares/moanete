@@ -15,7 +15,8 @@ dependencies = [
 
 [project.optional-dependencies]
 cloud = ["anthropic>=0.25.0"]
-all = ["moanete[cloud]"]
+screen = ["mss>=9.0.0"]
+all = ["moanete[cloud,screen]"]
 
 [project.scripts]
 moanete = "moanete.cli:main"
