@@ -87,6 +87,7 @@ System audio monitors (use with --monitor auto):
 |-------|-------------------------------------|
 | `s`   | Generate summary                    |
 | `d`   | Describe screen (requires `mss`)    |
+| `c`   | Configure insight tabs              |
 | `q`   | Quit                                |
 | `Tab` | Switch panel focus                  |
 
@@ -153,6 +154,7 @@ Config is stored in `~/.config/moanete/config.env`. Available settings:
 | `WHISPER_MODEL`      | `base`                    | faster-whisper model size            |
 | `WHISPER_LANGUAGE`   | *(auto-detect)*           | Language code (e.g. `en`, `pt`, `es`)|
 | `WHISPER_BEAM_SIZE`  | `5`                       | Beam size (higher = better, slower)  |
+| `INSIGHT_TABS`       | `Suggestions,Key Points,Action Items,Questions` | Comma-separated insight categories (see presets below) |
 | `BG_OPACITY`         | `1.0`                     | Background opacity (0.0–1.0)         |
 | `TOP_BAR_HEIGHT`     | `1fr`                     | Insights tabs height (CSS units)     |
 | `BOTTOM_BAR_HEIGHT`  | `2fr`                     | Main tabs height (CSS units)         |
@@ -163,6 +165,19 @@ All settings can be overridden by environment variables:
 
 ```sh
 WHISPER_MODEL=small OLLAMA_MODEL=mistral moanete
+```
+
+### Insight tab presets
+
+| Context            | `INSIGHT_TABS` value |
+|--------------------|----------------------|
+| Meeting (default)  | `Suggestions,Key Points,Action Items,Questions` |
+| Code interview     | `Code Topics,Technical Questions,Red Flags,Strengths` |
+| Pair programming   | `Bugs,Design Decisions,TODOs,Questions` |
+| Lecture            | `Key Concepts,Examples,Questions,References` |
+
+```sh
+INSIGHT_TABS="Bugs,Design Decisions,TODOs,Questions" moanete
 ```
 
 ## Development

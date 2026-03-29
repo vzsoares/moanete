@@ -9,9 +9,21 @@ from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.color import Color
-from textual.widgets import Footer, Input, RichLog, Static, TabbedContent, TabPane
+from textual.containers import Vertical
+from textual.screen import ModalScreen
+from textual.widgets import (
+    Button,
+    Footer,
+    Input,
+    Label,
+    RichLog,
+    Static,
+    TabbedContent,
+    TabPane,
+)
 
 from moanete import config, llm
+from moanete.analyzer import _to_key, build_system_prompt
 from moanete.llm import LLMError
 
 if TYPE_CHECKING:
@@ -20,6 +32,13 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 _COMPACT_HEIGHT = 20
+
+_PRESETS: dict[str, str] = {
+    "Meeting": "Suggestions,Key Points,Action Items,Questions",
+    "Code Interview": "Code Topics,Technical Questions,Red Flags,Strengths",
+    "Pair Programming": "Bugs,Design Decisions,TODOs,Questions",
+    "Lecture": "Key Concepts,Examples,Questions,References",
+}
 
 
 class _TUILogHandler(logging.Handler):
@@ -63,6 +82,130 @@ Be concise.
 """
 
 
+# ---------------------------------------------------------------------------
+# Config modal
+# ---------------------------------------------------------------------------
+
+
+class _ConfigResult:
+    """Result from the config modal."""
+
+    def __init__(self, tabs: str, language: str) -> None:
+        self.tabs = tabs
+        self.language = language
+
+
+class ConfigScreen(ModalScreen[_ConfigResult | None]):
+    """Modal for changing insight tabs and language on the fly."""
+
+    CSS = """
+    ConfigScreen {
+        align: center middle;
+    }
+
+    #config-dialog {
+        width: 60;
+        height: auto;
+        max-height: 80%;
+        border: thick $accent;
+        background: $surface;
+        padding: 1 2;
+    }
+
+    #config-dialog Label {
+        margin-bottom: 1;
+    }
+
+    #tabs-input, #lang-input {
+        width: 100%;
+        margin-bottom: 1;
+    }
+
+    .preset-btn {
+        width: 100%;
+        margin-bottom: 0;
+    }
+
+    #btn-row {
+        layout: horizontal;
+        height: auto;
+        margin-top: 1;
+    }
+
+    #btn-row Button {
+        width: 1fr;
+    }
+    """
+
+    BINDINGS: ClassVar[list[Binding]] = [
+        Binding("escape", "cancel", "Cancel", show=False),
+    ]
+
+    def __init__(self, current_tabs: str, current_lang: str, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self._current_tabs = current_tabs
+        self._current_lang = current_lang
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="config-dialog"):
+            yield Label("[bold]Configure[/]")
+            yield Label("Insight tabs (comma-separated):")
+            yield Input(
+                value=self._current_tabs,
+                placeholder="Comma-separated tab names",
+                id="tabs-input",
+            )
+            yield Label("[dim]Presets:[/]")
+            for preset_name, preset_val in _PRESETS.items():
+                yield Button(
+                    f"{preset_name}: {preset_val}",
+                    id=f"preset-{_to_key(preset_name)}",
+                    classes="preset-btn",
+                    variant="default",
+                )
+            yield Label("Whisper language (blank = auto-detect):")
+            yield Input(
+                value=self._current_lang,
+                placeholder="e.g. en, pt, es, fr, de, ja, zh",
+                id="lang-input",
+            )
+            from textual.containers import Horizontal
+
+            with Horizontal(id="btn-row"):
+                yield Button("Apply", variant="primary", id="btn-apply")
+                yield Button("Cancel", variant="default", id="btn-cancel")
+
+    @on(Button.Pressed, ".preset-btn")
+    def _on_preset(self, event: Button.Pressed) -> None:
+        btn_id = event.button.id or ""
+        key = btn_id.removeprefix("preset-")
+        for name, val in _PRESETS.items():
+            if _to_key(name) == key:
+                self.query_one("#tabs-input", Input).value = val
+                break
+
+    @on(Button.Pressed, "#btn-apply")
+    def _on_apply(self, event: Button.Pressed) -> None:
+        tabs = self.query_one("#tabs-input", Input).value.strip()
+        lang = self.query_one("#lang-input", Input).value.strip()
+        if tabs:
+            self.dismiss(_ConfigResult(tabs=tabs, language=lang))
+        else:
+            self.dismiss(None)
+
+    @on(Button.Pressed, "#btn-cancel")
+    def _on_cancel(self, event: Button.Pressed) -> None:
+        self.dismiss(None)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
+# ---------------------------------------------------------------------------
+# Main app
+# ---------------------------------------------------------------------------
+
+
 class MoaneteApp(App):
     """Main TUI application."""
 
@@ -73,8 +216,9 @@ class MoaneteApp(App):
     }
 
     #live-transcript {
+        width: 100%;
         height: auto;
-        max-height: 3;
+        max-height: 5;
         border: heavy $accent;
         padding: 0 1;
     }
@@ -96,12 +240,14 @@ class MoaneteApp(App):
         Binding("q", "quit", "Quit"),
         Binding("s", "summarize", "Summarize", priority=False),
         Binding("d", "describe_screen", "Describe screen", priority=False),
+        Binding("c", "config", "Config", priority=False),
         Binding("tab", "focus_next", "Next panel", show=False),
     ]
 
-    def __init__(self, analyzer: Analyzer, **kwargs) -> None:
+    def __init__(self, analyzer: Analyzer, transcriber: object | None = None, **kwargs) -> None:
         super().__init__(**kwargs)
         self._analyzer = analyzer
+        self._transcriber = transcriber
         self._chat_history: list[dict[str, str]] = []
         self._log_handler = _TUILogHandler()
         fmt = "%(asctime)s %(name)s %(levelname)s: %(message)s"
@@ -113,14 +259,10 @@ class MoaneteApp(App):
             "[bold]Transcript[/] [dim]listening...[/]", id="live-transcript"
         )
         with TabbedContent(id="top-bar"):
-            with TabPane("Suggestions", id="suggestions-tab"):
-                yield RichLog(id="suggestions-log", wrap=True, markup=True)
-            with TabPane("Key Points", id="key-points-tab"):
-                yield RichLog(id="key-points-log", wrap=True, markup=True)
-            with TabPane("Actions", id="actions-tab"):
-                yield RichLog(id="actions-log", wrap=True, markup=True)
-            with TabPane("Questions", id="questions-tab"):
-                yield RichLog(id="questions-log", wrap=True, markup=True)
+            for name in self._analyzer.categories:
+                key = _to_key(name)
+                with TabPane(name, id=f"{key}-tab"):
+                    yield RichLog(id=f"{key}-log", wrap=True, markup=True)
         with TabbedContent(id="bottom-bar"):
             with TabPane("Transcript", id="transcript-tab"):
                 yield RichLog(id="transcript-log", wrap=True, markup=True)
@@ -175,24 +317,87 @@ class MoaneteApp(App):
             self._compact = compact
             self.query_one("#top-bar").display = not compact
 
+    # -- Config modal -------------------------------------------------------
+
+    def action_config(self) -> None:
+        current_tabs = ",".join(self._analyzer.categories)
+        current_lang = ""
+        if self._transcriber and hasattr(self._transcriber, "_language"):
+            current_lang = self._transcriber._language or ""
+        self.push_screen(
+            ConfigScreen(current_tabs, current_lang),
+            callback=self._on_config_result,
+        )
+
+    def _on_config_result(self, result: _ConfigResult | None) -> None:
+        if result is None:
+            return
+        categories = [t.strip() for t in result.tabs.split(",") if t.strip()]
+        if categories:
+            self._apply_new_categories(categories)
+        self._apply_language(result.language)
+
+    def _apply_new_categories(self, categories: list[str]) -> None:
+        """Rebuild the top bar with new insight categories."""
+        # Update analyzer in-place
+        a = self._analyzer
+        a._categories = categories
+        a._keys = [_to_key(c) for c in categories]
+        a._system_prompt = build_system_prompt(categories)
+        with a._lock:
+            a._insights = {k: [] for k in a._keys}
+
+        # Rebuild top-bar widget
+        top_bar = self.query_one("#top-bar", TabbedContent)
+        top_bar.remove()
+
+        new_top = TabbedContent(id="top-bar")
+        for name in categories:
+            key = _to_key(name)
+            pane = TabPane(name, id=f"{key}-tab")
+            pane.compose_add_child(RichLog(id=f"{key}-log", wrap=True, markup=True))
+            new_top.compose_add_child(pane)
+
+        self.mount(new_top, after=self.query_one("#live-transcript"))
+        self._apply_sizes()
+        self._check_compact()
+
+        # Save to config file
+        cfg = config.load_config()
+        cfg["INSIGHT_TABS"] = ",".join(categories)
+        config.save_config(cfg)
+
+        log.info("Insight tabs changed to: %s", categories)
+
+    def _apply_language(self, language: str) -> None:
+        """Update the transcriber language live."""
+        lang = language.strip() or None
+        if self._transcriber and hasattr(self._transcriber, "_language"):
+            self._transcriber._language = lang  # type: ignore[attr-defined]
+        cfg = config.load_config()
+        cfg["WHISPER_LANGUAGE"] = language.strip()
+        config.save_config(cfg)
+        log.info("Whisper language changed to: %s", lang or "auto-detect")
+
+    # -- Insights -----------------------------------------------------------
+
     def _refresh_insights(self) -> None:
         insights = self._analyzer.insights
-        self._write_insight_list("#suggestions-log", insights.suggestions)
-        self._write_insight_list("#key-points-log", insights.key_points)
-        self._write_insight_list("#actions-log", insights.action_items)
-        self._write_insight_list("#questions-log", insights.questions)
+        for key in self._analyzer.keys:
+            try:
+                widget = self.query_one(f"#{key}-log", RichLog)
+            except Exception:
+                continue
+            items = insights.get(key, [])
+            widget.clear()
+            if not items:
+                widget.write("[dim]Nothing yet...[/]")
+            else:
+                for item in items[-10:]:
+                    widget.write(f"  \u2022 {item}")
 
         if err := self._analyzer.last_error:
             self.query_one("#log-output", RichLog).write(f"[red]LLM: {err}[/]")
-
-    def _write_insight_list(self, widget_id: str, items: list[str]) -> None:
-        widget = self.query_one(widget_id, RichLog)
-        widget.clear()
-        if not items:
-            widget.write("[dim]Nothing yet...[/]")
-        else:
-            for item in items[-10:]:
-                widget.write(f"  \u2022 {item}")
 
     def append_transcript(self, text: str) -> None:
         """Called from the transcription pipeline to show new text."""
@@ -239,12 +444,12 @@ class MoaneteApp(App):
     def _build_qa_context(self) -> str:
         insights = self._analyzer.insights
         transcript = self._analyzer.transcript
-        parts = [
-            f"Transcript (last 2000 chars): {transcript[-2000:]}",
-            f"Key points: {', '.join(insights.key_points[-5:])}",
-            f"Action items: {', '.join(insights.action_items[-5:])}",
-            f"Open questions: {', '.join(insights.questions[-5:])}",
-        ]
+        parts = [f"Transcript (last 2000 chars): {transcript[-2000:]}"]
+        for name, key in zip(
+            self._analyzer.categories, self._analyzer.keys, strict=True
+        ):
+            items = insights.get(key, [])
+            parts.append(f"{name}: {', '.join(items[-5:])}")
         return "\n".join(parts)
 
     def action_summarize(self) -> None:

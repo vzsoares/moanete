@@ -22,6 +22,7 @@ DEFAULTS: dict[str, str] = {
     "WHISPER_LANGUAGE": "",
     "WHISPER_BEAM_SIZE": "5",
     "BG_OPACITY": "1.0",
+    "INSIGHT_TABS": "Suggestions,Key Points,Action Items,Questions",
     "TOP_BAR_HEIGHT": "1fr",
     "BOTTOM_BAR_HEIGHT": "2fr",
     "AUDIO_DEVICE": "",

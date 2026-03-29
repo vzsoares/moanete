@@ -4,27 +4,24 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import threading
 import time
-from dataclasses import dataclass, field
 
 from moanete import llm
 from moanete.llm import LLMError
 
 log = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """\
+_SYSTEM_TEMPLATE = """\
 You are a neutral real-time meeting assistant. Your job is to extract factual insights from \
 meeting transcripts regardless of topic (politics, business, legal, medical, etc.). You are \
-reporting what was said, not endorsing it. Given the latest transcript chunk and prior context,
+reporting what was said, not endorsing it. Given the latest transcript chunk and prior context, \
 extract structured insights. Respond ONLY with valid JSON — no markdown fences, no extra text.
 
-{
-  "suggestions": ["actionable suggestion", ...],
-  "key_points": ["important point discussed", ...],
-  "action_items": ["task someone committed to", ...],
-  "questions": ["open question raised", ...]
-}
+{{
+{json_keys}
+}}
 
 Rules:
 - Each list may be empty if nothing relevant was said.
@@ -32,36 +29,55 @@ Rules:
 - Do not repeat items already in prior context.
 """
 
+DEFAULT_CATEGORIES = ["Suggestions", "Key Points", "Action Items", "Questions"]
 
-@dataclass
-class Insights:
-    suggestions: list[str] = field(default_factory=list)
-    key_points: list[str] = field(default_factory=list)
-    action_items: list[str] = field(default_factory=list)
-    questions: list[str] = field(default_factory=list)
+
+def _to_key(name: str) -> str:
+    """Convert a display name to a JSON/dict key: 'Key Points' -> 'key_points'."""
+    return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+
+
+def build_system_prompt(categories: list[str]) -> str:
+    """Build the system prompt dynamically from category names."""
+    json_keys = ",\n".join(
+        f'  "{_to_key(c)}": ["{c.lower()} item", ...]' for c in categories
+    )
+    return _SYSTEM_TEMPLATE.format(json_keys=json_keys)
 
 
 class Analyzer:
     """Accumulates transcript text and periodically extracts insights via the LLM."""
 
-    def __init__(self, interval_s: float = 15.0) -> None:
+    def __init__(
+        self,
+        categories: list[str] | None = None,
+        interval_s: float = 15.0,
+    ) -> None:
         self._interval = interval_s
+        self._categories = categories or list(DEFAULT_CATEGORIES)
+        self._keys = [_to_key(c) for c in self._categories]
+        self._system_prompt = build_system_prompt(self._categories)
         self._transcript_chunks: list[str] = []
-        self._insights = Insights()
+        self._insights: dict[str, list[str]] = {k: [] for k in self._keys}
         self._lock = threading.Lock()
         self._running = False
         self._thread: threading.Thread | None = None
         self._last_error: str | None = None
 
     @property
-    def insights(self) -> Insights:
+    def categories(self) -> list[str]:
+        """Display names for insight categories."""
+        return list(self._categories)
+
+    @property
+    def keys(self) -> list[str]:
+        """JSON keys for insight categories."""
+        return list(self._keys)
+
+    @property
+    def insights(self) -> dict[str, list[str]]:
         with self._lock:
-            return Insights(
-                suggestions=list(self._insights.suggestions),
-                key_points=list(self._insights.key_points),
-                action_items=list(self._insights.action_items),
-                questions=list(self._insights.questions),
-            )
+            return {k: list(v) for k, v in self._insights.items()}
 
     @property
     def last_error(self) -> str | None:
@@ -100,13 +116,7 @@ class Analyzer:
                 return
             full_text = " ".join(self._transcript_chunks)
 
-        # Build context of what we already have so the LLM doesn't repeat
-        prior = {
-            "suggestions": self._insights.suggestions[-5:],
-            "key_points": self._insights.key_points[-5:],
-            "action_items": self._insights.action_items[-5:],
-            "questions": self._insights.questions[-5:],
-        }
+        prior = {k: v[-5:] for k, v in self._insights.items()}
 
         messages = [
             {
@@ -119,7 +129,7 @@ class Analyzer:
         ]
 
         try:
-            raw = llm.chat(messages, system=SYSTEM_PROMPT, max_tokens=512)
+            raw = llm.chat(messages, system=self._system_prompt, max_tokens=512)
             self._last_error = None
         except LLMError as e:
             self._last_error = str(e)
@@ -133,8 +143,8 @@ class Analyzer:
             return
 
         with self._lock:
-            for key in ("suggestions", "key_points", "action_items", "questions"):
-                existing = getattr(self._insights, key)
+            for key in self._keys:
+                existing = self._insights[key]
                 for item in data.get(key, []):
                     if item and item not in existing:
                         existing.append(item)

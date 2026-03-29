@@ -121,7 +121,9 @@ def _run(
     from moanete.audio_capture import AudioCapture
     from moanete.transcribe import Transcriber
 
-    analyzer = Analyzer()
+    raw_tabs = cfg.get("INSIGHT_TABS", "")
+    categories = [t.strip() for t in raw_tabs.split(",") if t.strip()] or None
+    analyzer = Analyzer(categories=categories)
 
     def on_transcript(text: str) -> None:
         analyzer.feed(text)
@@ -158,7 +160,7 @@ def _run(
         else:
             from moanete.overlay import MoaneteApp
 
-            app = MoaneteApp(analyzer=analyzer)
+            app = MoaneteApp(analyzer=analyzer, transcriber=transcriber)
             app.run()
     except KeyboardInterrupt:
         pass
