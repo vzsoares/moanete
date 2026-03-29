@@ -39,7 +39,7 @@ def summarize_transcript(transcript: str, max_tokens: int = 1024) -> str:
     return llm.chat(messages, system=SUMMARIZE_SYSTEM, max_tokens=max_tokens)
 
 
-_MAX_WIDTH = 1920
+_MAX_WIDTH = 800
 
 
 def capture_screen() -> bytes | None:

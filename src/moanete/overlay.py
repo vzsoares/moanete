@@ -242,7 +242,13 @@ class MoaneteApp(App):
         Binding("s", "summarize", "Summarize", priority=False),
         Binding("d", "describe_screen", "Describe screen", priority=False),
         Binding("c", "config", "Config", priority=False),
-        Binding("tab", "focus_next", "Next panel", show=False),
+        Binding("k", "focus_top", "Top"),
+        Binding("j", "focus_bottom", "Bottom"),
+        Binding("h", "tab_left", "Prev tab"),
+        Binding("l", "tab_right", "Next tab"),
+        Binding("i", "focus_chat", "Chat"),
+        Binding("escape", "unfocus_input", "", show=False),
+        Binding("tab", "focus_next", "Next", show=False),
     ]
 
     def __init__(self, analyzer: Analyzer, transcriber: object | None = None, **kwargs) -> None:
@@ -283,9 +289,16 @@ class MoaneteApp(App):
         self._log_handler.set_widget(log_widget)
         logging.getLogger().addHandler(self._log_handler)
         self.set_interval(2.0, self._refresh_insights)
+        self._apply_theme()
         self._apply_opacity()
         self._apply_sizes()
         self._check_compact()
+
+    def _apply_theme(self) -> None:
+        """Apply theme from config."""
+        theme = config.get("THEME")
+        if theme and theme in self.available_themes:
+            self.theme = theme
 
     def _apply_opacity(self) -> None:
         """Apply background opacity from config."""
@@ -317,6 +330,61 @@ class MoaneteApp(App):
         if compact != self._compact:
             self._compact = compact
             self.query_one("#top-bar").display = not compact
+
+    # -- Navigation ---------------------------------------------------------
+
+    def _in_input(self) -> bool:
+        return self.focused is not None and isinstance(self.focused, Input)
+
+    def _active_bar(self) -> TabbedContent | None:
+        """Return whichever TabbedContent (or child) currently has focus."""
+        for bar_id in ("#top-bar", "#bottom-bar"):
+            try:
+                bar = self.query_one(bar_id, TabbedContent)
+            except Exception:
+                continue
+            if bar.has_focus or any(
+                w.has_focus for w in bar.query("*").results()
+            ):
+                return bar
+        return None
+
+    def _cycle_tab(self, delta: int) -> None:
+        bar = self._active_bar()
+        if bar is None:
+            return
+        panes = [t.id for t in bar.query("TabPane").results() if t.id]
+        if not panes:
+            return
+        idx = panes.index(bar.active) if bar.active in panes else 0
+        bar.active = panes[(idx + delta) % len(panes)]
+
+    def check_action(self, action: str, parameters: tuple) -> bool | None:
+        """Block single-key navigation actions when typing in an Input."""
+        nav_actions = {
+            "focus_top", "focus_bottom", "tab_left", "tab_right", "focus_chat",
+        }
+        return not (action in nav_actions and self._in_input())
+
+    def action_focus_top(self) -> None:
+        self.query_one("#top-bar", TabbedContent).focus()
+
+    def action_focus_bottom(self) -> None:
+        self.query_one("#bottom-bar", TabbedContent).focus()
+
+    def action_focus_chat(self) -> None:
+        self.query_one("#bottom-bar", TabbedContent).active = "chat-tab"
+        self.query_one("#chat-input", Input).focus()
+
+    def action_unfocus_input(self) -> None:
+        if self._in_input():
+            self.query_one("#bottom-bar", TabbedContent).focus()
+
+    def action_tab_left(self) -> None:
+        self._cycle_tab(-1)
+
+    def action_tab_right(self) -> None:
+        self._cycle_tab(1)
 
     # -- Config modal -------------------------------------------------------
 
@@ -481,7 +549,7 @@ class MoaneteApp(App):
 
     @work(thread=True)
     def _run_describe_screen(self) -> None:
-        from moanete.summarize import capture_screen, describe_screen
+        from moanete.summarize import capture_screen
 
         summary_log = self.query_one("#summary-log", RichLog)
         self.call_from_thread(summary_log.write, "[dim]Capturing screen...[/]")
@@ -498,14 +566,17 @@ class MoaneteApp(App):
             summary_log.write,
             "[dim]Describing screen with vision model...[/]",
         )
-        description = describe_screen(png)
-        if description:
+        try:
+            description = llm.describe_image(
+                __import__("base64").b64encode(png).decode("ascii"),
+                "Describe what is shown on this screen in detail.",
+            )
             self.call_from_thread(
                 summary_log.write,
                 f"[bold]Screen Description:[/]\n{description}",
             )
-        else:
+        except LLMError as e:
             self.call_from_thread(
                 summary_log.write,
-                "[yellow]Vision model unavailable.[/]",
+                f"[yellow]Vision error: {e}[/]",
             )

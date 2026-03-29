@@ -19,7 +19,7 @@ ollama serve
 ### 2. Pull models
 
 ```sh
-ollama pull llama3.2 && ollama pull llava
+ollama pull llama3.2 && ollama pull moondream
 ```
 
 ### 3. Install moanete
@@ -85,11 +85,17 @@ System audio monitors (use with --monitor auto):
 
 | Key   | Action                              |
 |-------|-------------------------------------|
+| `k`   | Focus top tabs (insights)           |
+| `j`   | Focus bottom tabs                   |
+| `h`   | Previous tab in focused bar         |
+| `l`   | Next tab in focused bar             |
+| `i`   | Enter chat input                    |
+| `Esc` | Exit chat input                     |
 | `s`   | Generate summary                    |
 | `d`   | Describe screen (requires `mss`)    |
-| `c`   | Configure insight tabs              |
+| `c`   | Configure insight tabs + language   |
 | `q`   | Quit                                |
-| `Tab` | Switch panel focus                  |
+| `Tab` | Cycle focus                         |
 
 The TUI has four insight panels (suggestions, key points, action items, questions) and tabbed views for transcript, chat, summary, and logs.
 
@@ -130,8 +136,8 @@ Type in the chat input to ask questions about the meeting.
 | Text (fast)       | llama3.2          | 4 GB       |
 | Text (better)     | llama3.1:8b       | 8 GB       |
 | Text (best local) | llama3.3:70b      | 40 GB      |
-| Vision            | llava             | 8 GB       |
-| Vision (small)    | llava:7b          | 6 GB       |
+| Vision            | moondream         | 2 GB       |
+| Vision (large)    | llava             | 8 GB       |
 | Low RAM machines  | llama3.2:1b       | 2 GB       |
 
 Override models in the setup wizard or via environment variables:
@@ -154,6 +160,7 @@ Config is stored in `~/.config/moanete/config.env`. Available settings:
 | `WHISPER_MODEL`      | `base`                    | faster-whisper model size            |
 | `WHISPER_LANGUAGE`   | *(auto-detect)*           | Language code (e.g. `en`, `pt`, `es`)|
 | `WHISPER_BEAM_SIZE`  | `5`                       | Beam size (higher = better, slower)  |
+| `THEME`              | `catppuccin-mocha`        | UI theme (see available themes below) |
 | `INSIGHT_TABS`       | `Suggestions,Key Points,Action Items,Questions` | Comma-separated insight categories (see presets below) |
 | `BG_OPACITY`         | `1.0`                     | Background opacity (0.0–1.0)         |
 | `TOP_BAR_HEIGHT`     | `1fr`                     | Insights tabs height (CSS units)     |

@@ -55,9 +55,32 @@ def _ollama_chat(
     return r.json()["message"]["content"]
 
 
+def _ollama_unload_all(host: str) -> None:
+    """Unload all models to free VRAM for the vision model."""
+    import time
+
+    try:
+        r = httpx.get(f"{host}/api/ps", timeout=5)
+        models = r.json().get("models", [])
+        for m in models:
+            httpx.post(
+                f"{host}/api/generate",
+                json={"model": m["name"], "keep_alive": 0},
+                timeout=5,
+            )
+        # Wait for VRAM to actually free
+        if models:
+            time.sleep(2)
+    except Exception:
+        pass
+
+
 def _ollama_describe_image(base64_png: str, prompt: str) -> str:
     host = config.get("OLLAMA_HOST")
     model = config.get("OLLAMA_VISION_MODEL")
+
+    # Free VRAM — unload all models before loading vision model
+    _ollama_unload_all(host)
 
     payload = {
         "model": model,
