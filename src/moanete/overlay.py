@@ -293,6 +293,8 @@ class MoaneteApp(App):
         self._apply_opacity()
         self._apply_sizes()
         self._check_compact()
+        # Set initial focus so key bindings work
+        self._focus_bar("#bottom-bar")
 
     def _apply_theme(self) -> None:
         """Apply theme from config."""
@@ -359,6 +361,17 @@ class MoaneteApp(App):
         idx = panes.index(bar.active) if bar.active in panes else 0
         bar.active = panes[(idx + delta) % len(panes)]
 
+    def _focus_bar(self, bar_id: str) -> None:
+        """Focus the Tabs widget inside a TabbedContent."""
+        from textual.widgets._tabs import Tabs
+
+        bar = self.query_one(bar_id, TabbedContent)
+        try:
+            tabs = bar.query_one(Tabs)
+            tabs.focus()
+        except Exception:
+            pass
+
     def check_action(self, action: str, parameters: tuple) -> bool | None:
         """Block single-key navigation actions when typing in an Input."""
         nav_actions = {
@@ -367,10 +380,10 @@ class MoaneteApp(App):
         return not (action in nav_actions and self._in_input())
 
     def action_focus_top(self) -> None:
-        self.query_one("#top-bar", TabbedContent).focus()
+        self._focus_bar("#top-bar")
 
     def action_focus_bottom(self) -> None:
-        self.query_one("#bottom-bar", TabbedContent).focus()
+        self._focus_bar("#bottom-bar")
 
     def action_focus_chat(self) -> None:
         self.query_one("#bottom-bar", TabbedContent).active = "chat-tab"
@@ -378,7 +391,7 @@ class MoaneteApp(App):
 
     def action_unfocus_input(self) -> None:
         if self._in_input():
-            self.query_one("#bottom-bar", TabbedContent).focus()
+            self._focus_bar("#bottom-bar")
 
     def action_tab_left(self) -> None:
         self._cycle_tab(-1)

@@ -4,6 +4,8 @@
 
 Offline-first meeting assistant — real-time transcription, LLM-powered insights, and Q&A.
 
+> **Moañete** — from the Guarani language: *confirmar / fazer ser verdade*. Used when persuasion is based on proving that something is real or correct.
+
 No audio, no screenshots, no transcripts, no queries ever leave your machine when running in Ollama mode.
 
 ## Fully Offline Setup
