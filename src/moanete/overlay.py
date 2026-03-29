@@ -1,4 +1,4 @@
-"""Terminal overlay UI with panels for insights, transcript, and Q&A chat."""
+"""Terminal overlay UI with tabbed insights, transcript, and Q&A chat."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.color import Color
-from textual.containers import Horizontal, VerticalScroll
 from textual.widgets import Footer, Input, RichLog, Static, TabbedContent, TabPane
 
 from moanete import config, llm
@@ -20,8 +19,7 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-# Height threshold: below this, insight panels are hidden
-_COMPACT_HEIGHT = 30
+_COMPACT_HEIGHT = 20
 
 
 class _TUILogHandler(logging.Handler):
@@ -65,26 +63,6 @@ Be concise.
 """
 
 
-class InsightPanel(Static):
-    """A panel that displays a list of insight items."""
-
-    def __init__(self, title: str, **kwargs) -> None:
-        super().__init__(**kwargs)
-        self._title = title
-        self._items: list[str] = []
-
-    def set_items(self, items: list[str]) -> None:
-        self._items = items
-        self._render_items()
-
-    def _render_items(self) -> None:
-        if not self._items:
-            self.update(f"[bold]{self._title}[/]\n[dim]Nothing yet...[/]")
-        else:
-            lines = "\n".join(f"  • {item}" for item in self._items[-10:])
-            self.update(f"[bold]{self._title}[/]\n{lines}")
-
-
 class MoaneteApp(App):
     """Main TUI application."""
 
@@ -101,26 +79,12 @@ class MoaneteApp(App):
         padding: 0 1;
     }
 
-    #insights-scroll {
-        height: auto;
-        max-height: 50%;
-    }
-
-    .insights-row {
-        layout: grid;
-        grid-size: 2;
-        grid-gutter: 1;
-        height: auto;
-        max-height: 8;
-    }
-
-    InsightPanel {
-        border: round $primary;
-        padding: 0 1;
+    #top-bar {
+        height: 1fr;
     }
 
     #bottom-bar {
-        height: 1fr;
+        height: 2fr;
     }
 
     #chat-input {
@@ -145,20 +109,26 @@ class MoaneteApp(App):
         self._compact = False
 
     def compose(self) -> ComposeResult:
-        yield Static("[bold]Transcript[/] [dim]listening...[/]", id="live-transcript")
-        with VerticalScroll(id="insights-scroll"):
-            with Horizontal(classes="insights-row"):
-                yield InsightPanel("Suggestions", id="suggestions")
-                yield InsightPanel("Key Points", id="key-points")
-            with Horizontal(classes="insights-row"):
-                yield InsightPanel("Action Items", id="action-items")
-                yield InsightPanel("Questions", id="questions")
+        yield Static(
+            "[bold]Transcript[/] [dim]listening...[/]", id="live-transcript"
+        )
+        with TabbedContent(id="top-bar"):
+            with TabPane("Suggestions", id="suggestions-tab"):
+                yield RichLog(id="suggestions-log", wrap=True, markup=True)
+            with TabPane("Key Points", id="key-points-tab"):
+                yield RichLog(id="key-points-log", wrap=True, markup=True)
+            with TabPane("Actions", id="actions-tab"):
+                yield RichLog(id="actions-log", wrap=True, markup=True)
+            with TabPane("Questions", id="questions-tab"):
+                yield RichLog(id="questions-log", wrap=True, markup=True)
         with TabbedContent(id="bottom-bar"):
             with TabPane("Transcript", id="transcript-tab"):
                 yield RichLog(id="transcript-log", wrap=True, markup=True)
             with TabPane("Chat", id="chat-tab"):
                 yield RichLog(id="chat-log", wrap=True, markup=True)
-                yield Input(placeholder="Ask about the meeting...", id="chat-input")
+                yield Input(
+                    placeholder="Ask about the meeting...", id="chat-input"
+                )
             with TabPane("Summary", id="summary-tab"):
                 yield RichLog(id="summary-log", wrap=True, markup=True)
             with TabPane("Log", id="log-tab"):
@@ -171,6 +141,7 @@ class MoaneteApp(App):
         logging.getLogger().addHandler(self._log_handler)
         self.set_interval(2.0, self._refresh_insights)
         self._apply_opacity()
+        self._apply_sizes()
         self._check_compact()
 
     def _apply_opacity(self) -> None:
@@ -184,28 +155,44 @@ class MoaneteApp(App):
         if alpha < 1.0:
             bg = Color(18, 18, 18, alpha)
             self.styles.background = bg
-            for widget in self.query("InsightPanel, #live-transcript, #bottom-bar, RichLog"):
-                widget.styles.background = bg
+            for w in self.query("#live-transcript, #top-bar, #bottom-bar, RichLog"):
+                w.styles.background = bg
+
+    def _apply_sizes(self) -> None:
+        """Apply configurable panel sizes from config."""
+        top = config.get("TOP_BAR_HEIGHT") or "1fr"
+        bottom = config.get("BOTTOM_BAR_HEIGHT") or "2fr"
+        self.query_one("#top-bar").styles.height = top
+        self.query_one("#bottom-bar").styles.height = bottom
 
     def on_resize(self) -> None:
         self._check_compact()
 
     def _check_compact(self) -> None:
-        """Hide insight panels when terminal is too small."""
+        """Hide insight tabs when terminal is too small."""
         compact = self.size.height < _COMPACT_HEIGHT
         if compact != self._compact:
             self._compact = compact
-            self.query_one("#insights-scroll").display = not compact
+            self.query_one("#top-bar").display = not compact
 
     def _refresh_insights(self) -> None:
         insights = self._analyzer.insights
-        self.query_one("#suggestions", InsightPanel).set_items(insights.suggestions)
-        self.query_one("#key-points", InsightPanel).set_items(insights.key_points)
-        self.query_one("#action-items", InsightPanel).set_items(insights.action_items)
-        self.query_one("#questions", InsightPanel).set_items(insights.questions)
+        self._write_insight_list("#suggestions-log", insights.suggestions)
+        self._write_insight_list("#key-points-log", insights.key_points)
+        self._write_insight_list("#actions-log", insights.action_items)
+        self._write_insight_list("#questions-log", insights.questions)
 
         if err := self._analyzer.last_error:
             self.query_one("#log-output", RichLog).write(f"[red]LLM: {err}[/]")
+
+    def _write_insight_list(self, widget_id: str, items: list[str]) -> None:
+        widget = self.query_one(widget_id, RichLog)
+        widget.clear()
+        if not items:
+            widget.write("[dim]Nothing yet...[/]")
+        else:
+            for item in items[-10:]:
+                widget.write(f"  \u2022 {item}")
 
     def append_transcript(self, text: str) -> None:
         """Called from the transcription pipeline to show new text."""
@@ -293,18 +280,22 @@ class MoaneteApp(App):
         if not png:
             self.call_from_thread(
                 summary_log.write,
-                "[yellow]Screenshot failed — is mss installed? (uv pip install moanete[screen])[/]",
+                "[yellow]Screenshot failed — is mss installed?[/]",
             )
             return
 
-        self.call_from_thread(summary_log.write, "[dim]Describing screen with vision model...[/]")
+        self.call_from_thread(
+            summary_log.write,
+            "[dim]Describing screen with vision model...[/]",
+        )
         description = describe_screen(png)
         if description:
             self.call_from_thread(
-                summary_log.write, f"[bold]Screen Description:[/]\n{description}"
+                summary_log.write,
+                f"[bold]Screen Description:[/]\n{description}",
             )
         else:
             self.call_from_thread(
                 summary_log.write,
-                "[yellow]Vision model unavailable — screen description skipped.[/]",
+                "[yellow]Vision model unavailable.[/]",
             )

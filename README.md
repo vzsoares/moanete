@@ -154,6 +154,8 @@ Config is stored in `~/.config/moanete/config.env`. Available settings:
 | `WHISPER_LANGUAGE`   | *(auto-detect)*           | Language code (e.g. `en`, `pt`, `es`)|
 | `WHISPER_BEAM_SIZE`  | `5`                       | Beam size (higher = better, slower)  |
 | `BG_OPACITY`         | `1.0`                     | Background opacity (0.0–1.0)         |
+| `TOP_BAR_HEIGHT`     | `1fr`                     | Insights tabs height (CSS units)     |
+| `BOTTOM_BAR_HEIGHT`  | `2fr`                     | Main tabs height (CSS units)         |
 | `AUDIO_DEVICE`       | *(auto)*                  | Microphone device index/name         |
 | `MONITOR_DEVICE`     | *(empty)*                 | System audio: `auto`, index, or empty|
 
