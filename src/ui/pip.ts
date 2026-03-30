@@ -1,17 +1,18 @@
 /**
- * PiP UI — builds and manages the floating overlay DOM.
+ * PiP UI — minimal floating overlay.
  *
- * All functions operate on the PiP window's document but run in the
- * main app's JS context. No script injection needed.
+ * Shows status indicators + a single content area that toggles between
+ * transcript, insights, or summary. No tabs, no chat, no complex layout.
  */
 import type { ChatMessage } from "../providers/llm/types.ts";
 import { toKey } from "../core/analyzer.ts";
 import PIP_CSS from "./global.css?inline";
 
 let doc: Document | null = null;
-let chatHistory: ChatMessage[] = [];
 const transcriptBuffer: string[] = [];
-let onChat: ((question: string, history: ChatMessage[]) => void) | null = null;
+let currentView: "transcript" | "insights" | "summary" = "transcript";
+let currentInsights: Record<string, string[]> = {};
+let currentCategories: string[] = [];
 let onSummarize: (() => void) | null = null;
 
 export interface PipCallbacks {
@@ -21,213 +22,146 @@ export interface PipCallbacks {
 
 export function buildPipUI(pipDoc: Document, _cssUrl: string, callbacks: PipCallbacks): void {
   doc = pipDoc;
-  onChat = callbacks.onChat;
   onSummarize = callbacks.onSummarize;
-  chatHistory = [];
   transcriptBuffer.length = 0;
+  currentInsights = {};
+  currentCategories = [];
+  currentView = "transcript";
 
-  // Inline CSS — PiP window can't access parent stylesheets
   const style = doc.createElement("style");
   style.textContent = PIP_CSS;
   doc.head.appendChild(style);
 
-  // Build DOM
   doc.body.setAttribute("data-theme", "dark");
   doc.body.className = "h-screen flex flex-col overflow-hidden bg-base-200 text-base-content text-sm";
   doc.body.innerHTML = `
     <header class="flex items-center gap-2 px-3 py-1.5 bg-base-300 border-b border-base-content/10 shrink-0">
-      <span class="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></span>
       <h1 class="text-sm font-semibold text-primary">moanete</h1>
+      <div class="flex-1"></div>
+      <span id="mic-dot" class="w-2 h-2 rounded-full bg-success animate-pulse" title="Mic active"></span>
+      <span id="pc-dot" class="w-2 h-2 rounded-full bg-base-content/30" title="PC audio inactive"></span>
     </header>
 
-    <div id="live-transcript" class="px-3 py-1.5 bg-base-300 border-b border-base-content/10 text-xs text-base-content/60 truncate shrink-0 min-h-7">
-      <strong class="text-base-content/80">Transcript</strong> listening...
+    <div class="flex gap-1 px-3 py-1 bg-base-300 border-b border-base-content/10 shrink-0">
+      <button class="btn btn-xs btn-primary" data-view="transcript">Transcript</button>
+      <button class="btn btn-xs btn-ghost" data-view="insights">Insights</button>
+      <button class="btn btn-xs btn-ghost" data-view="summary">Summary</button>
     </div>
 
-    <div class="tabs tabs-bordered shrink-0 bg-base-300" id="top-tabs"></div>
-    <div class="relative flex-1 overflow-hidden" id="top-panels"></div>
-
-    <div class="tabs tabs-bordered shrink-0 bg-base-300" id="bottom-tabs">
-      <button class="tab tab-active" data-panel="transcript-panel">Transcript</button>
-      <button class="tab" data-panel="chat-panel">Chat</button>
-      <button class="tab" data-panel="summary-panel">Summary</button>
-    </div>
-
-    <div class="relative flex-2 overflow-hidden" id="bottom-panels">
-      <div class="panel-item absolute inset-0 p-2 overflow-y-auto block" id="transcript-panel">
-        <div id="full-transcript" class="whitespace-pre-wrap leading-relaxed text-xs text-base-content/50 italic">Waiting for speech...</div>
-      </div>
-
-      <div class="panel-item absolute inset-0 p-2 overflow-y-auto hidden flex-col" id="chat-panel">
-        <div id="chat-messages" class="flex-1 overflow-y-auto flex flex-col gap-1.5"></div>
-        <div id="chat-input-row" class="flex gap-1 pt-1.5 shrink-0">
-          <input type="text" id="chat-input" class="input input-bordered input-sm flex-1" placeholder="Ask about the meeting..." />
-          <button id="btn-send" class="btn btn-primary btn-sm">Send</button>
-        </div>
-      </div>
-
-      <div class="panel-item absolute inset-0 p-2 overflow-y-auto hidden" id="summary-panel">
-        <button id="btn-summarize" class="btn btn-ghost btn-sm mb-2">Generate Summary</button>
-        <div id="summary-content" class="whitespace-pre-wrap leading-relaxed text-base-content/50 italic">No summary yet.</div>
+    <div id="pip-content" class="flex-1 overflow-y-auto p-3">
+      <div id="pip-transcript" class="text-xs leading-relaxed whitespace-pre-wrap text-base-content/50 italic">Waiting for speech...</div>
+      <div id="pip-insights" class="hidden text-xs"></div>
+      <div id="pip-summary" class="hidden text-xs leading-relaxed text-base-content/50 italic">
+        <button id="pip-btn-summarize" class="btn btn-ghost btn-xs mb-2">Generate Summary</button>
+        <div id="pip-summary-text">No summary yet.</div>
       </div>
     </div>
   `;
 
-  setupTabSwitching();
-  setupChat();
-  setupSummary();
+  setupViewToggle();
+  setupPipSummary();
 }
 
 export function destroyPipUI(): void {
   doc = null;
-  onChat = null;
   onSummarize = null;
 }
 
-// --- Tab switching ---
-
-function setupTabSwitching(): void {
+function setupViewToggle(): void {
   if (!doc) return;
-  for (const bar of doc.querySelectorAll<HTMLDivElement>(".tabs")) {
-    bar.addEventListener("click", (e) => {
-      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-panel]");
-      if (!btn || !doc) return;
+  for (const btn of doc.querySelectorAll<HTMLButtonElement>("[data-view]")) {
+    btn.addEventListener("click", () => {
+      if (!doc) return;
+      currentView = btn.dataset.view as typeof currentView;
 
-      const panelsContainer = bar.nextElementSibling as HTMLElement;
-      for (const b of bar.querySelectorAll("button")) b.classList.remove("tab-active");
-      for (const p of panelsContainer.querySelectorAll<HTMLElement>(".panel-item")) {
-        p.classList.add("hidden");
-        p.classList.remove("block", "flex");
+      for (const b of doc.querySelectorAll<HTMLButtonElement>("[data-view]")) {
+        b.className = `btn btn-xs ${b.dataset.view === currentView ? "btn-primary" : "btn-ghost"}`;
       }
 
-      btn.classList.add("tab-active");
-      const panel = doc.getElementById(btn.dataset.panel!);
-      if (panel) {
-        panel.classList.remove("hidden");
-        panel.classList.add(btn.dataset.panel === "chat-panel" ? "flex" : "block");
-      }
+      doc.getElementById("pip-transcript")!.classList.toggle("hidden", currentView !== "transcript");
+      doc.getElementById("pip-insights")!.classList.toggle("hidden", currentView !== "insights");
+      doc.getElementById("pip-summary")!.classList.toggle("hidden", currentView !== "summary");
+
+      if (currentView === "insights") renderInsightsView();
     });
   }
 }
 
-// --- Chat ---
-
-function setupChat(): void {
+function setupPipSummary(): void {
   if (!doc) return;
-  const input = doc.getElementById("chat-input") as HTMLInputElement;
-  const btn = doc.getElementById("btn-send") as HTMLButtonElement;
-
-  const send = () => {
-    const q = input.value.trim();
-    if (!q) return;
-    input.value = "";
-    appendChat("user", q);
-    onChat?.(q, chatHistory);
-  };
-
-  btn.addEventListener("click", send);
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") send();
-  });
-}
-
-export function appendChat(role: string, text: string): void {
-  if (!doc) return;
-  const el = doc.createElement("div");
-  el.className = `text-sm leading-snug ${role === "user" ? "text-info" : "text-success"}`;
-  el.textContent = `${role === "user" ? "You" : "moanete"}: ${text}`;
-  doc.getElementById("chat-messages")!.appendChild(el);
-  el.scrollIntoView({ behavior: "smooth" });
-}
-
-export function setChatReply(answer: string, history: ChatMessage[]): void {
-  appendChat("assistant", answer);
-  chatHistory = history;
-}
-
-// --- Summary ---
-
-function setupSummary(): void {
-  if (!doc) return;
-  doc.getElementById("btn-summarize")!.addEventListener("click", () => {
-    const el = doc!.getElementById("summary-content")!;
-    el.textContent = "Generating...";
-    el.className = "whitespace-pre-wrap leading-relaxed";
+  doc.getElementById("pip-btn-summarize")!.addEventListener("click", () => {
+    if (!doc) return;
+    doc.getElementById("pip-summary-text")!.textContent = "Generating...";
     onSummarize?.();
   });
 }
 
-export function setSummary(text: string): void {
+function renderInsightsView(): void {
   if (!doc) return;
-  const el = doc.getElementById("summary-content")!;
-  el.textContent = text;
-  el.className = "whitespace-pre-wrap leading-relaxed";
-}
+  const container = doc.getElementById("pip-insights")!;
+  container.innerHTML = "";
 
-// --- Insights ---
+  if (currentCategories.length === 0) {
+    container.innerHTML = '<p class="text-base-content/40 italic">No insights yet...</p>';
+    return;
+  }
 
-export function rebuildInsightTabs(categories: string[]): void {
-  if (!doc) return;
-  const topTabs = doc.getElementById("top-tabs")!;
-  const topPanels = doc.getElementById("top-panels")!;
-
-  topTabs.innerHTML = "";
-  topPanels.innerHTML = "";
-
-  categories.forEach((name, i) => {
+  for (const name of currentCategories) {
     const key = toKey(name);
-    const btn = doc!.createElement("button");
-    btn.className = `tab${i === 0 ? " tab-active" : ""}`;
-    btn.textContent = name;
-    btn.dataset.panel = `insight-${key}`;
-    topTabs.appendChild(btn);
+    const items = currentInsights[key] || [];
 
-    const panel = doc!.createElement("div");
-    panel.className = `panel-item absolute inset-0 p-2 overflow-y-auto ${i === 0 ? "block" : "hidden"}`;
-    panel.id = `insight-${key}`;
-    panel.innerHTML = '<div class="text-base-content/50 italic">Nothing yet...</div>';
-    topPanels.appendChild(panel);
-  });
-}
-
-export function updateInsights(insights: Record<string, string[]>): void {
-  if (!doc) return;
-  for (const [key, items] of Object.entries(insights)) {
-    const panel = doc.getElementById(`insight-${key}`);
-    if (!panel) continue;
+    const section = doc.createElement("div");
+    section.className = "mb-3";
+    section.innerHTML = `<h3 class="font-semibold text-primary text-xs mb-1">${name}</h3>`;
 
     if (items.length === 0) {
-      panel.innerHTML = '<div class="text-base-content/50 italic">Nothing yet...</div>';
+      section.innerHTML += '<p class="text-base-content/40 italic">Nothing yet...</p>';
     } else {
       const ul = doc.createElement("ul");
-      ul.className = "list-disc list-inside flex flex-col gap-1 marker:text-primary";
-      for (const item of items.slice(-10)) {
+      ul.className = "list-disc list-inside flex flex-col gap-0.5 marker:text-primary";
+      for (const item of items.slice(-5)) {
         const li = doc.createElement("li");
         li.className = "leading-snug";
         li.textContent = item;
         ul.appendChild(li);
       }
-      panel.innerHTML = "";
-      panel.appendChild(ul);
+      section.appendChild(ul);
     }
+
+    container.appendChild(section);
   }
 }
 
-// --- Transcript ---
+// --- Public API (called from popup.ts) ---
 
 export function pipAppendTranscript(text: string): void {
   if (!doc) return;
   transcriptBuffer.push(text);
-  const el = doc.getElementById("full-transcript")!;
-  el.className = "whitespace-pre-wrap leading-relaxed text-xs";
+  const el = doc.getElementById("pip-transcript")!;
+  el.className = "text-xs leading-relaxed whitespace-pre-wrap";
   el.textContent = transcriptBuffer.join("\n");
   el.scrollTop = el.scrollHeight;
+}
 
-  // Update live bar
-  const live = doc.getElementById("live-transcript")!;
-  const full = transcriptBuffer.join(" ");
-  const tail = full.length > 200 ? `...${full.slice(-200)}` : full;
-  live.innerHTML = `<strong class="text-base-content/80">Transcript</strong> ${tail}`;
+export function updateInsights(insights: Record<string, string[]>): void {
+  currentInsights = insights;
+  if (currentView === "insights") renderInsightsView();
+}
+
+export function setChatReply(_answer: string, _history: ChatMessage[]): void {
+  // Chat is only in the main dashboard, not PiP
+}
+
+export function setSummary(text: string): void {
+  if (!doc) return;
+  const el = doc.getElementById("pip-summary-text")!;
+  el.textContent = text;
+  el.className = "";
+}
+
+export function rebuildInsightTabs(categories: string[]): void {
+  currentCategories = categories;
+  if (currentView === "insights") renderInsightsView();
 }
 
 export function seedPipState(
@@ -235,9 +169,8 @@ export function seedPipState(
   insights: Record<string, string[]>,
   transcript: string,
 ): void {
-  rebuildInsightTabs(categories);
-  updateInsights(insights);
-  if (transcript) {
-    pipAppendTranscript(transcript);
-  }
+  currentCategories = categories;
+  currentInsights = insights;
+  if (transcript) pipAppendTranscript(transcript);
+  if (currentView === "insights") renderInsightsView();
 }

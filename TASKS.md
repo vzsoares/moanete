@@ -84,15 +84,11 @@
 - [x] Document findings in SPEC.md compatibility section (§10)
 
 ### Redesign UI
-- [ ] **Full web app UI** — proper dashboard, not a tiny popup
-- [ ] Dashboard view: live transcript, insights, chat, summary all visible
-- [ ] Settings page with provider config, language, presets
+- [x] **Full web app UI** — dashboard layout with navbar, transcript, insights, chat, summary
+- [x] Dashboard view: live transcript (left), insights + chat (right), summary (footer)
+- [x] Settings in modal dialog (gear icon in navbar)
 - [ ] Session history browser
-- [ ] **Simplify PiP overlay** — minimal floating widget:
-  - Two status indicators: mic active (green dot) + PC audio active (green dot)
-  - One main content area showing the current result (transcript, insights, or summary)
-  - Simple selector/toggle to switch what the main area shows
-  - No tabs, no chat input, no complex layout — just a clean floating readout
+- [x] **Simplify PiP overlay** — minimal floating widget with mic/PC status dots, single content area with transcript/insights/summary toggle
 
 ### Playwright testing
 - [ ] Add Playwright as dev dependency
@@ -104,29 +100,19 @@
 
 ---
 
-## Phase 3: Hosted Version
-
-- [ ] Backend proxy for Anthropic/OpenAI API calls (CORS)
-- [ ] Auth + user accounts
-- [ ] Billing / subscription management
-- [ ] Usage dashboard
-- [ ] Deploy hosted version
-
----
-
-## Phase 4: Session History
+## Phase 3: Session History
 
 - [ ] Define session data model: id, timestamp, transcript, insights, summary
 - [ ] Store sessions in IndexedDB
 - [ ] Auto-save transcript and insights on session end
 - [ ] Save final summary if one was generated
-- [ ] Session list view in popup (date, duration, preview)
+- [ ] Session list view (date, duration, preview)
 - [ ] Session detail view (full transcript + insights)
 - [ ] Export session as markdown
 
 ---
 
-## Phase 5: MCP Integration
+## Phase 4: MCP Integration
 
 ### MCP server
 - [ ] Implement moanete as an MCP server
@@ -141,7 +127,7 @@
 
 ---
 
-## Phase 6: AI Enhancements
+## Phase 5: AI Enhancements
 
 ### Structured output
 - [ ] Use OpenAI/Anthropic structured output for insight extraction
@@ -154,9 +140,19 @@
 
 ---
 
-## Phase 7: Testing & CI
+## Phase 6: Testing & CI
 
 - [ ] Add GitHub Actions workflow for Biome check
 - [ ] Add integration test with mock audio stream
 - [ ] Add test for provider abstraction with mock API responses
 - [ ] Test web app in CI (playwright)
+
+---
+
+## Phase 7: Hosted Version
+
+- [ ] Backend proxy for Anthropic/OpenAI API calls (CORS)
+- [ ] Auth + user accounts
+- [ ] Billing / subscription management
+- [ ] Usage dashboard
+- [ ] Deploy hosted version

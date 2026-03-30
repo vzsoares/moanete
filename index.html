@@ -8,33 +8,101 @@
   <link rel="stylesheet" href="/src/ui/global.css" />
 </head>
 
-<body class="min-h-screen bg-base-200 p-6">
-  <div id="app" class="max-w-md mx-auto flex flex-col gap-4">
-    <h1 class="text-2xl font-bold text-primary">moanete</h1>
-    <p class="text-xs text-base-content/50 -mt-3">meeting assistant</p>
+<body class="h-screen flex flex-col bg-base-200 overflow-hidden">
 
-    <section id="status" class="flex items-center gap-2 text-sm">
+  <!-- Navbar -->
+  <nav class="navbar bg-base-300 border-b border-base-content/10 px-4 gap-2 shrink-0">
+    <div class="flex-none">
+      <h1 class="text-lg font-bold text-primary">moanete</h1>
+    </div>
+
+    <div class="flex items-center gap-2 ml-2">
       <span id="status-dot" class="dot off"></span>
-      <span id="status-text">Stopped</span>
+      <span id="status-text" class="text-xs text-base-content/60">Stopped</span>
+    </div>
+
+    <div class="flex-1"></div>
+
+    <div class="flex items-center gap-2">
+      <button id="btn-start" class="btn btn-primary btn-sm">Start Session</button>
+      <button id="btn-stop" class="btn btn-error btn-sm" hidden>Stop</button>
+      <button id="btn-pip" class="btn btn-ghost btn-sm" hidden>PiP</button>
+      <button id="btn-settings" class="btn btn-ghost btn-sm btn-circle" aria-label="Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Compat hints -->
+  <div id="compat-hints" class="flex flex-col gap-1 px-4 pt-2"></div>
+
+  <!-- Main dashboard -->
+  <main class="flex-1 flex overflow-hidden p-4 gap-4">
+
+    <!-- Left: Transcript -->
+    <section class="flex-1 flex flex-col bg-base-300 rounded-lg overflow-hidden">
+      <div class="px-4 py-2 border-b border-base-content/10 shrink-0">
+        <h2 class="text-sm font-semibold">Transcript</h2>
+      </div>
+      <div id="transcript-box" class="flex-1 overflow-y-auto p-4">
+        <div id="transcript-content" class="text-sm leading-relaxed text-base-content/50 italic whitespace-pre-wrap break-words">Start a session to see the transcript...</div>
+      </div>
     </section>
 
-    <div class="flex gap-2">
-      <button id="btn-start" class="btn btn-primary">Start Session</button>
-      <button id="btn-stop" class="btn btn-error" hidden>Stop</button>
-      <button id="btn-pip" class="btn btn-ghost" hidden>Pop Out (PiP)</button>
-    </div>
+    <!-- Right: Insights + Chat -->
+    <aside class="w-96 flex flex-col gap-4 shrink-0">
 
-    <div id="transcript-box" class="bg-base-300 border border-base-content/10 rounded-lg p-3 max-h-40 overflow-y-auto" hidden>
-      <div id="transcript-content" class="text-xs leading-relaxed text-base-content/70 whitespace-pre-wrap break-words">Listening...</div>
-    </div>
+      <!-- Insights -->
+      <section class="flex-1 flex flex-col bg-base-300 rounded-lg overflow-hidden">
+        <div class="tabs tabs-bordered bg-base-300 shrink-0" id="insight-tabs">
+          <button class="tab tab-active text-xs" data-panel="insight-suggestions">Suggestions</button>
+          <button class="tab text-xs" data-panel="insight-key_points">Key Points</button>
+          <button class="tab text-xs" data-panel="insight-action_items">Action Items</button>
+          <button class="tab text-xs" data-panel="insight-questions">Questions</button>
+        </div>
+        <div id="insight-panels" class="flex-1 relative overflow-hidden">
+          <div class="panel-item absolute inset-0 p-3 overflow-y-auto block" id="insight-suggestions">
+            <p class="text-xs text-base-content/40 italic">Nothing yet...</p>
+          </div>
+          <div class="panel-item absolute inset-0 p-3 overflow-y-auto hidden" id="insight-key_points">
+            <p class="text-xs text-base-content/40 italic">Nothing yet...</p>
+          </div>
+          <div class="panel-item absolute inset-0 p-3 overflow-y-auto hidden" id="insight-action_items">
+            <p class="text-xs text-base-content/40 italic">Nothing yet...</p>
+          </div>
+          <div class="panel-item absolute inset-0 p-3 overflow-y-auto hidden" id="insight-questions">
+            <p class="text-xs text-base-content/40 italic">Nothing yet...</p>
+          </div>
+        </div>
+      </section>
 
-    <div class="divider my-0"></div>
+      <!-- Chat -->
+      <section class="flex-1 flex flex-col bg-base-300 rounded-lg overflow-hidden">
+        <div class="px-4 py-2 border-b border-base-content/10 shrink-0">
+          <h2 class="text-sm font-semibold">Chat</h2>
+        </div>
+        <div id="chat-messages" class="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5"></div>
+        <div class="flex gap-2 p-3 border-t border-base-content/10 shrink-0">
+          <input type="text" id="chat-input" class="input input-bordered input-sm flex-1" placeholder="Ask about the meeting..." />
+          <button id="btn-send" class="btn btn-primary btn-sm">Send</button>
+        </div>
+      </section>
 
-    <div class="collapse collapse-arrow bg-base-300">
-      <input type="checkbox" />
-      <div class="collapse-title text-sm font-medium">Settings</div>
-      <div class="collapse-content flex flex-col gap-3">
+    </aside>
+  </main>
 
+  <!-- Bottom: Summary -->
+  <footer class="shrink-0 bg-base-300 border-t border-base-content/10 px-4 py-3 flex items-start gap-3">
+    <button id="btn-summarize" class="btn btn-ghost btn-sm shrink-0">Generate Summary</button>
+    <div id="summary-content" class="text-sm leading-relaxed text-base-content/50 italic flex-1 max-h-24 overflow-y-auto">No summary yet.</div>
+  </footer>
+
+  <!-- Settings modal -->
+  <dialog id="settings-modal" class="modal">
+    <div class="modal-box">
+      <h3 class="text-lg font-bold mb-4">Settings</h3>
+
+      <div class="flex flex-col gap-3">
         <label class="form-control w-full">
           <div class="label"><span class="label-text text-xs">STT Provider</span></div>
           <select id="stt-provider" class="select select-bordered select-sm w-full">
@@ -107,13 +175,16 @@
             <span class="label-text text-xs">Tab / System Audio</span>
           </label>
         </div>
+      </div>
 
-        <button id="btn-save" class="btn btn-sm btn-outline">Save Settings</button>
+      <div class="modal-action">
+        <button id="btn-save" class="btn btn-primary btn-sm">Save</button>
+        <form method="dialog"><button class="btn btn-ghost btn-sm">Close</button></form>
       </div>
     </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+  </dialog>
 
-    <div id="compat-hints" class="flex flex-col gap-1 text-xs"></div>
-  </div>
   <script type="module" src="/src/ui/popup.ts"></script>
 </body>
 </html>

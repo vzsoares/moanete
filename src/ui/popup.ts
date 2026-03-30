@@ -1,4 +1,5 @@
 import { loadConfig, saveConfig, type Config } from "../core/config.ts";
+import { toKey } from "../core/analyzer.ts";
 import { Session } from "../core/session.ts";
 import { answerQuestion, summarizeTranscript } from "../core/summarizer.ts";
 import {
@@ -7,14 +8,16 @@ import {
   pipAppendTranscript,
   updateInsights as pipUpdateInsights,
   seedPipState,
-  setChatReply,
-  setSummary,
+  setChatReply as pipSetChatReply,
+  setSummary as pipSetSummary,
 } from "./pip.ts";
+import type { ChatMessage } from "../providers/llm/types.ts";
 
 const $ = <T extends HTMLElement>(sel: string): T =>
   document.querySelector<T>(sel)!;
 
 let session: Session | null = null;
+let chatHistory: ChatMessage[] = [];
 
 // --- Settings UI ---
 
@@ -54,7 +57,7 @@ function loadSettings(): void {
   renderKeyFields(cfg.sttProvider, cfg.llmProvider, cfg);
 }
 
-async function saveSettings(): Promise<void> {
+function saveSettings(): void {
   const partial: Record<string, unknown> = {
     sttProvider: $<HTMLSelectElement>("#stt-provider").value,
     sttLanguage: $<HTMLSelectElement>("#stt-language").value,
@@ -70,7 +73,7 @@ async function saveSettings(): Promise<void> {
     }
   }
 
-  await saveConfig(partial as Partial<Config>);
+  saveConfig(partial as Partial<Config>);
 }
 
 // --- Session control ---
@@ -89,6 +92,7 @@ async function startSession(): Promise<void> {
   };
 
   session.onInsights = (insights) => {
+    updateDashboardInsights(insights);
     pipUpdateInsights(insights);
   };
 
@@ -102,7 +106,11 @@ async function startSession(): Promise<void> {
     $<HTMLButtonElement>("#btn-start").hidden = true;
     $<HTMLButtonElement>("#btn-stop").hidden = false;
     $<HTMLButtonElement>("#btn-pip").hidden = false;
-    $<HTMLDivElement>("#transcript-box").hidden = false;
+
+    // Reset transcript
+    const el = $<HTMLDivElement>("#transcript-content");
+    el.textContent = "Listening...";
+    el.className = "text-sm leading-relaxed text-base-content/50 italic whitespace-pre-wrap break-words";
   } catch (e) {
     setStatus("error", e instanceof Error ? e.message : String(e));
   }
@@ -115,7 +123,6 @@ function stopSession(): void {
   $<HTMLButtonElement>("#btn-start").hidden = false;
   $<HTMLButtonElement>("#btn-stop").hidden = true;
   $<HTMLButtonElement>("#btn-pip").hidden = true;
-  $<HTMLDivElement>("#transcript-box").hidden = true;
   pipWindow?.close();
 }
 
@@ -123,12 +130,115 @@ function stopSession(): void {
 
 function appendTranscript(text: string): void {
   const el = $<HTMLDivElement>("#transcript-content");
-  if (el.textContent === "Listening...") {
+  if (el.classList.contains("italic")) {
     el.textContent = "";
+    el.className = "text-sm leading-relaxed whitespace-pre-wrap break-words";
   }
   el.textContent += `${text}\n`;
   const box = $<HTMLDivElement>("#transcript-box");
   box.scrollTop = box.scrollHeight;
+}
+
+// --- Dashboard insights ---
+
+function updateDashboardInsights(insights: Record<string, string[]>): void {
+  for (const [key, items] of Object.entries(insights)) {
+    const panel = document.getElementById(`insight-${key}`);
+    if (!panel) continue;
+
+    if (items.length === 0) {
+      panel.innerHTML = '<p class="text-xs text-base-content/40 italic">Nothing yet...</p>';
+    } else {
+      const ul = document.createElement("ul");
+      ul.className = "list-disc list-inside flex flex-col gap-1 text-xs marker:text-primary";
+      for (const item of items.slice(-10)) {
+        const li = document.createElement("li");
+        li.className = "leading-snug";
+        li.textContent = item;
+        ul.appendChild(li);
+      }
+      panel.innerHTML = "";
+      panel.appendChild(ul);
+    }
+  }
+}
+
+// --- Dashboard insight tab switching ---
+
+function setupInsightTabs(): void {
+  const bar = $<HTMLDivElement>("#insight-tabs");
+  bar.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-panel]");
+    if (!btn) return;
+
+    const panels = $<HTMLDivElement>("#insight-panels");
+    for (const b of bar.querySelectorAll("button")) b.classList.remove("tab-active");
+    for (const p of panels.querySelectorAll<HTMLElement>(".panel-item")) {
+      p.classList.add("hidden");
+      p.classList.remove("block");
+    }
+
+    btn.classList.add("tab-active");
+    const panel = document.getElementById(btn.dataset.panel!);
+    if (panel) {
+      panel.classList.remove("hidden");
+      panel.classList.add("block");
+    }
+  });
+}
+
+// --- Dashboard chat ---
+
+function setupChat(): void {
+  const input = $<HTMLInputElement>("#chat-input");
+  const btn = $<HTMLButtonElement>("#btn-send");
+
+  const send = async () => {
+    const q = input.value.trim();
+    if (!q || !session?.llm || !session.analyzer) return;
+    input.value = "";
+    appendChatMessage("user", q);
+
+    try {
+      const context = buildQAContext();
+      const result = await answerQuestion(session.llm, q, context, chatHistory);
+      chatHistory = result.history;
+      appendChatMessage("assistant", result.answer);
+    } catch (e) {
+      appendChatMessage("assistant", `Error: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
+
+  btn.addEventListener("click", send);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") send();
+  });
+}
+
+function appendChatMessage(role: string, text: string): void {
+  const el = document.createElement("div");
+  el.className = `text-sm leading-snug ${role === "user" ? "text-info" : "text-success"}`;
+  el.textContent = `${role === "user" ? "You" : "moanete"}: ${text}`;
+  $<HTMLDivElement>("#chat-messages").appendChild(el);
+  el.scrollIntoView({ behavior: "smooth" });
+}
+
+// --- Dashboard summary ---
+
+function setupSummary(): void {
+  $<HTMLButtonElement>("#btn-summarize").addEventListener("click", async () => {
+    if (!session?.llm || !session.analyzer) return;
+    const el = $<HTMLDivElement>("#summary-content");
+    el.textContent = "Generating...";
+    el.className = "text-sm leading-relaxed flex-1 max-h-24 overflow-y-auto";
+
+    try {
+      const summary = await summarizeTranscript(session.llm, session.analyzer.transcript);
+      el.textContent = summary;
+    } catch (e) {
+      el.textContent = `Error: ${e instanceof Error ? e.message : String(e)}`;
+    }
+  });
 }
 
 // --- Picture-in-Picture ---
@@ -137,9 +247,7 @@ let pipWindow: Window | null = null;
 
 async function openPiP(): Promise<void> {
   if (!("documentPictureInPicture" in window)) {
-    alert(
-      "Document Picture-in-Picture is not supported in this browser.\nRequires Chrome 116+.",
-    );
+    alert("Document Picture-in-Picture is not supported in this browser.\nRequires Chrome 116+.");
     return;
   }
 
@@ -154,13 +262,11 @@ async function openPiP(): Promise<void> {
     height: 500,
   });
 
-  // Build the PiP UI directly from main context — no script injection needed
   buildPipUI(pipWindow.document, "", {
     onChat: handlePipChat,
     onSummarize: handlePipSummarize,
   });
 
-  // Seed with current state
   if (session?.analyzer) {
     seedPipState(
       session.analyzer.categories,
@@ -175,14 +281,14 @@ async function openPiP(): Promise<void> {
   });
 }
 
-async function handlePipChat(question: string, history: import("../providers/llm/types.ts").ChatMessage[]): Promise<void> {
+async function handlePipChat(question: string, history: ChatMessage[]): Promise<void> {
   if (!session?.llm || !session.analyzer) return;
   try {
     const context = buildQAContext();
     const result = await answerQuestion(session.llm, question, context, history);
-    setChatReply(result.answer, result.history);
+    pipSetChatReply(result.answer, result.history);
   } catch (e) {
-    setChatReply(`Error: ${e instanceof Error ? e.message : String(e)}`, []);
+    pipSetChatReply(`Error: ${e instanceof Error ? e.message : String(e)}`, []);
   }
 }
 
@@ -190,9 +296,9 @@ async function handlePipSummarize(): Promise<void> {
   if (!session?.llm || !session.analyzer) return;
   try {
     const summary = await summarizeTranscript(session.llm, session.analyzer.transcript);
-    setSummary(summary);
+    pipSetSummary(summary);
   } catch (e) {
-    setSummary(`Error: ${e instanceof Error ? e.message : String(e)}`);
+    pipSetSummary(`Error: ${e instanceof Error ? e.message : String(e)}`);
   }
 }
 
@@ -245,13 +351,45 @@ function detectCompatHints(): void {
   }
 }
 
+// --- Rebuild insight tabs from config ---
+
+function rebuildDashboardInsightTabs(categories: string[]): void {
+  const bar = $<HTMLDivElement>("#insight-tabs");
+  const panels = $<HTMLDivElement>("#insight-panels");
+  bar.innerHTML = "";
+  panels.innerHTML = "";
+
+  categories.forEach((name, i) => {
+    const key = toKey(name);
+    const btn = document.createElement("button");
+    btn.className = `tab text-xs${i === 0 ? " tab-active" : ""}`;
+    btn.textContent = name;
+    btn.dataset.panel = `insight-${key}`;
+    bar.appendChild(btn);
+
+    const panel = document.createElement("div");
+    panel.className = `panel-item absolute inset-0 p-3 overflow-y-auto ${i === 0 ? "block" : "hidden"}`;
+    panel.id = `insight-${key}`;
+    panel.innerHTML = '<p class="text-xs text-base-content/40 italic">Nothing yet...</p>';
+    panels.appendChild(panel);
+  });
+}
+
 // --- Event listeners ---
 
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
   loadSettings();
   detectCompatHints();
+  setupInsightTabs();
+  setupChat();
+  setupSummary();
 
-  const cfg = await loadConfig();
+  const cfg = loadConfig();
+
+  // Build insight tabs from config
+  const categories = cfg.insightTabs.split(",").map((s) => s.trim()).filter(Boolean);
+  rebuildDashboardInsightTabs(categories);
+
   $<HTMLSelectElement>("#stt-provider").addEventListener("change", () => {
     renderKeyFields(
       $<HTMLSelectElement>("#stt-provider").value,
@@ -273,7 +411,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  $<HTMLButtonElement>("#btn-save").addEventListener("click", saveSettings);
+  // Settings modal
+  $<HTMLButtonElement>("#btn-settings").addEventListener("click", () => {
+    $<HTMLDialogElement>("#settings-modal").showModal();
+  });
+
+  $<HTMLButtonElement>("#btn-save").addEventListener("click", () => {
+    saveSettings();
+    // Rebuild insight tabs with new config
+    const newCategories = $<HTMLInputElement>("#insight-tabs").value.split(",").map((s) => s.trim()).filter(Boolean);
+    rebuildDashboardInsightTabs(newCategories);
+    $<HTMLDialogElement>("#settings-modal").close();
+  });
+
   $<HTMLButtonElement>("#btn-start").addEventListener("click", startSession);
   $<HTMLButtonElement>("#btn-stop").addEventListener("click", stopSession);
   $<HTMLButtonElement>("#btn-pip").addEventListener("click", openPiP);
