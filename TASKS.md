@@ -64,10 +64,11 @@
 - [x] Inline PiP CSS
 
 ### Convert extension → plain web app
-- [ ] Remove extension scaffolding (manifest.json, background.ts, chrome.* APIs, vite-plugin-web-extension)
-- [ ] Replace `chrome.storage` with `localStorage` / IndexedDB in config.ts
-- [ ] Single `index.html` entry point — full-page app (not a popup)
-- [ ] Plain Vite SPA build (`bun run dev` → `http://localhost:5173`)
+- [x] Remove extension scaffolding (manifest.json, background.ts, chrome.* APIs, vite-plugin-web-extension)
+- [x] Replace `chrome.storage` with `localStorage` in config.ts
+- [x] Single `index.html` entry point — full-page app (not a popup)
+- [x] Plain Vite SPA build (`bun run dev` → `http://localhost:5173`)
+- [x] Add Tailwind CSS + DaisyUI (replaced custom catppuccin CSS)
 
 ### Fix broken features
 - [ ] **Fix PiP** — debug with Playwright MCP, ensure Document PiP API works from regular web page
@@ -114,14 +115,14 @@
 - [ ] Auth + user accounts
 - [ ] Billing / subscription management
 - [ ] Usage dashboard
-- [ ] Publish to Chrome Web Store
+- [ ] Deploy hosted version
 
 ---
 
 ## Phase 4: Session History
 
 - [ ] Define session data model: id, timestamp, transcript, insights, summary
-- [ ] Store sessions in `chrome.storage.local` or IndexedDB
+- [ ] Store sessions in IndexedDB
 - [ ] Auto-save transcript and insights on session end
 - [ ] Save final summary if one was generated
 - [ ] Session list view in popup (date, duration, preview)
@@ -163,4 +164,4 @@
 - [ ] Add GitHub Actions workflow for Biome check
 - [ ] Add integration test with mock audio stream
 - [ ] Add test for provider abstraction with mock API responses
-- [ ] Test Chrome Extension in CI (puppeteer or playwright)
+- [ ] Test web app in CI (playwright)

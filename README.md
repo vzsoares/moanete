@@ -1,15 +1,15 @@
 # moanete
 
-Meeting assistant — real-time transcription, LLM-powered insights, and Q&A as a Chrome Extension with a floating Picture-in-Picture overlay.
+Meeting assistant — real-time transcription, LLM-powered insights, and Q&A as a web app with a floating Picture-in-Picture overlay.
 
 > **Moañete** — from the Guarani language: *confirmar / fazer ser verdade*. Used when persuasion is based on proving that something is real or correct.
 
 ## How it works
 
 ```
-popup (settings + start)
+web app (settings + start)
     │
-    ├── Audio Capture (mic + tab audio via Web Audio API)
+    ├── Audio Capture (mic + system audio via Web Audio API)
     │     └── STT Provider (browser free / Deepgram paid)
     │           └── onTranscript → Analyzer + PiP overlay
     │
@@ -22,7 +22,7 @@ popup (settings + start)
           └── Summary (on demand)
 ```
 
-1. Click the extension popup → configure providers (or use free defaults)
+1. Open the app → configure providers (or use free defaults)
 2. Click "Start Session" → grants mic permission, starts transcription
 3. Click "Pop Out (PiP)" → floating overlay appears on top of your meeting
 4. The overlay shows live transcript, insights, chat, and summary
@@ -33,11 +33,9 @@ Requires [Bun](https://bun.sh) and Chrome 116+.
 
 ```sh
 bun install
-bun run dev           # development mode (vite)
-bun run build         # production build
+bun run dev           # http://localhost:5173
+bun run build         # production build → dist/
 ```
-
-Load as unpacked extension: Chrome → `chrome://extensions` → "Load unpacked" → select `dist/`.
 
 ## Provider options
 
@@ -46,7 +44,7 @@ Load as unpacked extension: Chrome → `chrome://extensions` → "Load unpacked"
 | **STT** | Browser SpeechRecognition (built-in, free) | Deepgram (BYOK or hosted) |
 | **LLM** | Ollama (local) or BYOK OpenAI/Anthropic | Hosted proxy (subscription) |
 
-No backend needed for the free tier — all API calls go directly from the extension.
+No backend needed for the free tier — all API calls go directly from the browser.
 
 For local LLM via Ollama:
 
@@ -58,7 +56,7 @@ ollama pull llama3.2
 
 ## Configuration
 
-Settings are configured in the extension popup and stored in `chrome.storage.local`.
+Settings are configured in the app and stored in `localStorage`.
 
 | Setting | Default | Options |
 |---------|---------|---------|
@@ -82,36 +80,39 @@ Settings are configured in the extension popup and stored in `chrome.storage.loc
 Requires [Bun](https://bun.sh).
 
 ```sh
-cd moanete-web
 bun install
-bun run dev           # vite dev server
+bun run dev           # vite dev server → http://localhost:5173
 bun run build         # production build
 bun run check         # biome lint + format check
 bun run fix           # biome auto-fix
 ```
 
+### Tech stack
+
+- **Bundler**: Vite
+- **Runtime / Package manager**: Bun
+- **Linter / Formatter**: Biome
+- **CSS**: Tailwind CSS + DaisyUI
+
 ### Project structure
 
 ```
-├── manifest.json                  # Chrome Extension Manifest V3
+├── index.html                     # Single-page app entry point
 ├── package.json                   # Bun + Vite + Biome
 ├── biome.json                     # Linter/formatter config
-├── public/
-│   └── popup.html                 # Extension popup
 └── src/
-    ├── background.js              # Service worker (tabCapture, keep-alive)
     ├── core/
-    │   ├── analyzer.js            # Real-time insight extraction
-    │   ├── audio.js               # Audio capture + mixing
-    │   ├── config.js              # Settings persistence
-    │   ├── session.js             # Orchestrator
-    │   └── summarizer.js          # Summarization + Q&A
+    │   ├── analyzer.ts            # Real-time insight extraction
+    │   ├── audio.ts               # Audio capture + mixing
+    │   ├── config.ts              # Settings persistence (localStorage)
+    │   ├── session.ts             # Orchestrator
+    │   └── summarizer.ts          # Summarization + Q&A
     ├── providers/
     │   ├── stt/                   # STT: browser (free), deepgram
     │   └── llm/                   # LLM: ollama, openai, anthropic
     └── ui/
-        ├── popup.{js,css}         # Extension popup
-        └── pip.{js,css}           # PiP floating overlay
+        ├── popup.{ts,css}         # Main app UI (Tailwind + DaisyUI)
+        └── pip.{ts,css}           # PiP floating overlay
 ```
 
 ## Requirements
@@ -125,7 +126,7 @@ bun run fix           # biome auto-fix
 ### Free tier with Ollama
 - **Audio** — captured by browser, transcribed locally via SpeechRecognition or sent to your own STT provider
 - **Transcripts** — sent only to your configured LLM provider (Ollama = local)
-- **API keys** — stored locally in `chrome.storage.local`, never sent to us
+- **API keys** — stored locally in `localStorage`, never sent to us
 
 When using cloud providers (Anthropic, OpenAI, Deepgram), data is sent to their APIs.
 

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>moanete</title>
+  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+  <link rel="stylesheet" href="/src/ui/global.css" />
+</head>
+
+<body class="min-h-screen bg-base-200 p-6">
+  <div id="app" class="max-w-md mx-auto flex flex-col gap-4">
+    <h1 class="text-2xl font-bold text-primary">moanete</h1>
+    <p class="text-xs text-base-content/50 -mt-3">meeting assistant</p>
+
+    <section id="status" class="flex items-center gap-2 text-sm">
+      <span id="status-dot" class="dot off"></span>
+      <span id="status-text">Stopped</span>
+    </section>
+
+    <div class="flex gap-2">
+      <button id="btn-start" class="btn btn-primary">Start Session</button>
+      <button id="btn-stop" class="btn btn-error" hidden>Stop</button>
+      <button id="btn-pip" class="btn btn-ghost" hidden>Pop Out (PiP)</button>
+    </div>
+
+    <div id="transcript-box" class="bg-base-300 border border-base-content/10 rounded-lg p-3 max-h-40 overflow-y-auto" hidden>
+      <div id="transcript-content" class="text-xs leading-relaxed text-base-content/70 whitespace-pre-wrap break-words">Listening...</div>
+    </div>
+
+    <div class="divider my-0"></div>
+
+    <div class="collapse collapse-arrow bg-base-300">
+      <input type="checkbox" />
+      <div class="collapse-title text-sm font-medium">Settings</div>
+      <div class="collapse-content flex flex-col gap-3">
+
+        <label class="form-control w-full">
+          <div class="label"><span class="label-text text-xs">STT Provider</span></div>
+          <select id="stt-provider" class="select select-bordered select-sm w-full">
+            <option value="browser">Browser (free)</option>
+            <option value="deepgram">Deepgram</option>
+          </select>
+        </label>
+
+        <label class="form-control w-full">
+          <div class="label"><span class="label-text text-xs">Language</span></div>
+          <select id="stt-language" class="select select-bordered select-sm w-full">
+            <option value="en-US">English (US)</option>
+            <option value="en-GB">English (UK)</option>
+            <option value="pt-BR">Portuguese (Brazil)</option>
+            <option value="pt-PT">Portuguese (Portugal)</option>
+            <option value="es-ES">Spanish (Spain)</option>
+            <option value="es-MX">Spanish (Mexico)</option>
+            <option value="fr-FR">French</option>
+            <option value="de-DE">German</option>
+            <option value="it-IT">Italian</option>
+            <option value="ja-JP">Japanese</option>
+            <option value="ko-KR">Korean</option>
+            <option value="zh-CN">Chinese (Simplified)</option>
+            <option value="zh-TW">Chinese (Traditional)</option>
+            <option value="ru-RU">Russian</option>
+            <option value="ar-SA">Arabic</option>
+            <option value="hi-IN">Hindi</option>
+            <option value="nl-NL">Dutch</option>
+            <option value="pl-PL">Polish</option>
+            <option value="tr-TR">Turkish</option>
+            <option value="uk-UA">Ukrainian</option>
+          </select>
+        </label>
+
+        <label class="form-control w-full">
+          <div class="label"><span class="label-text text-xs">LLM Provider</span></div>
+          <select id="llm-provider" class="select select-bordered select-sm w-full">
+            <option value="ollama">Ollama (local)</option>
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+          </select>
+        </label>
+
+        <div id="key-fields" class="flex flex-col gap-3"></div>
+
+        <label class="form-control w-full">
+          <div class="label"><span class="label-text text-xs">Insight Tabs</span></div>
+          <input
+            type="text"
+            id="insight-tabs"
+            class="input input-bordered input-sm w-full"
+            placeholder="Suggestions,Key Points,Action Items,Questions"
+          />
+        </label>
+
+        <div class="flex flex-wrap gap-1">
+          <button class="btn btn-xs btn-ghost" data-preset="Suggestions,Key Points,Action Items,Questions">Meeting</button>
+          <button class="btn btn-xs btn-ghost" data-preset="Code Topics,Technical Questions,Red Flags,Strengths">Interview</button>
+          <button class="btn btn-xs btn-ghost" data-preset="Bugs,Design Decisions,TODOs,Questions">Pair Programming</button>
+          <button class="btn btn-xs btn-ghost" data-preset="Key Concepts,Examples,Questions,References">Lecture</button>
+        </div>
+
+        <div class="flex gap-4">
+          <label class="label cursor-pointer gap-2">
+            <input type="checkbox" id="capture-mic" class="checkbox checkbox-sm" checked />
+            <span class="label-text text-xs">Microphone</span>
+          </label>
+          <label class="label cursor-pointer gap-2">
+            <input type="checkbox" id="capture-tab" class="checkbox checkbox-sm" />
+            <span class="label-text text-xs">Tab / System Audio</span>
+          </label>
+        </div>
+
+        <button id="btn-save" class="btn btn-sm btn-outline">Save Settings</button>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/src/ui/popup.ts"></script>
+</body>
+</html>

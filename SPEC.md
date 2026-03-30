@@ -2,46 +2,43 @@
 
 ## Goal
 
-A browser-based meeting assistant delivered as a Chrome Extension with a
+A browser-based meeting assistant delivered as a plain web app (Vite SPA) with a
 Picture-in-Picture floating overlay. Pluggable STT and LLM providers with a
 BYOK (Bring Your Own Key) free tier and a hosted paid tier.
 
-Uses Vite + Bun + Biome.
+Uses Vite + Bun + Biome + Tailwind CSS + DaisyUI.
 
 ---
 
 ## Architecture
 
 ```
-├── manifest.json                  # Chrome Extension Manifest V3
+├── index.html                     # Single-page app entry point
 ├── package.json                   # Bun + Vite + Biome
 ├── biome.json                     # Linter/formatter config
-├── public/
-│   └── popup.html                 # Extension popup (settings + start/stop)
 └── src/
-    ├── background.js              # Service worker (tabCapture, keep-alive)
     ├── core/
-    │   ├── analyzer.js            # Real-time insight extraction (setInterval)
-    │   ├── audio.js               # Web Audio API + getUserMedia/getDisplayMedia
-    │   ├── config.js              # chrome.storage.local / localStorage
-    │   ├── session.js             # Orchestrator (audio → STT → analyzer → UI)
-    │   └── summarizer.js          # On-demand summarization + Q&A
+    │   ├── analyzer.ts            # Real-time insight extraction (setInterval)
+    │   ├── audio.ts               # Web Audio API + getUserMedia/getDisplayMedia
+    │   ├── config.ts              # localStorage persistence
+    │   ├── session.ts             # Orchestrator (audio → STT → analyzer → UI)
+    │   └── summarizer.ts          # On-demand summarization + Q&A
     ├── providers/
-    │   ├── index.js               # Registry barrel
+    │   ├── index.ts               # Registry barrel
     │   ├── stt/
-    │   │   ├── types.js           # STT provider interface + registry
-    │   │   ├── browser.js         # Free: webkitSpeechRecognition
-    │   │   └── deepgram.js        # Paid: Deepgram WebSocket streaming
+    │   │   ├── types.ts           # STT provider interface + registry
+    │   │   ├── browser.ts         # Free: webkitSpeechRecognition
+    │   │   └── deepgram.ts        # Paid: Deepgram WebSocket streaming
     │   └── llm/
-    │       ├── types.js           # LLM provider interface + registry
-    │       ├── ollama.js          # Free: local Ollama
-    │       ├── openai.js          # Paid: OpenAI
-    │       └── anthropic.js       # Paid: Anthropic (needs CORS proxy)
+    │       ├── types.ts           # LLM provider interface + registry
+    │       ├── ollama.ts          # Free: local Ollama
+    │       ├── openai.ts          # Paid: OpenAI
+    │       └── anthropic.ts       # Paid: Anthropic (needs CORS proxy)
     └── ui/
-        ├── popup.css              # Popup styles (catppuccin)
-        ├── popup.js               # Settings, session control, PiP launch
-        ├── pip.css                # PiP overlay styles
-        └── pip.js                 # Floating overlay: transcript, insights, chat
+        ├── popup.css              # Main app styles (Tailwind + DaisyUI)
+        ├── popup.ts               # Settings, session control, PiP launch
+        ├── pip.css                # PiP overlay styles (standalone, inlined)
+        └── pip.ts                 # Floating overlay: transcript, insights, chat
 ```
 
 ---
@@ -49,8 +46,9 @@ Uses Vite + Bun + Biome.
 ## 1. Toolchain
 
 - **Runtime / Package manager**: Bun
-- **Bundler**: Vite + `vite-plugin-web-extension`
+- **Bundler**: Vite
 - **Linter / Formatter**: Biome
+- **CSS**: Tailwind CSS + DaisyUI
 
 ---
 
@@ -80,7 +78,7 @@ Pluggable registry pattern — providers register via side-effect imports:
 ## 4. Audio capture
 
 - **Microphone**: `navigator.mediaDevices.getUserMedia({ audio: true })`
-- **Tab/system audio**: `getDisplayMedia({ audio: true })` or `chrome.tabCapture`
+- **Tab/system audio**: `getDisplayMedia({ video: true, audio: true })` (video track discarded)
 - **Mixing**: Web Audio API `AudioContext` → `GainNode` (normalized) → `ScriptProcessor`
 - **Output**: Float32Array chunks at 16kHz mono, fed to STT provider
 
@@ -123,12 +121,9 @@ Pluggable registry pattern — providers register via side-effect imports:
 Uses the Document Picture-in-Picture API (`documentPictureInPicture.requestWindow()`)
 to create a floating always-on-top window with the meeting UI.
 
-Communication between popup (engine) and PiP (display) via `postMessage`:
-
-| Direction | Messages |
-|-----------|----------|
-| Popup → PiP | `init`, `transcript`, `insights`, `chat-reply`, `summary` |
-| PiP → Popup | `chat` (question), `summarize` |
+The PiP UI is built directly from the main app's JS context (no script injection
+or postMessage needed). Functions in `pip.ts` operate on the PiP document but
+run in the main window.
 
 ### UI layout
 
@@ -155,7 +150,7 @@ Communication between popup (engine) and PiP (display) via `postMessage`:
 
 ## 8. Configuration
 
-Stored in `chrome.storage.local` (extension) or `localStorage` (web app).
+Stored in `localStorage`.
 
 | Key | Default | Description |
 |-----|---------|-------------|
@@ -179,30 +174,30 @@ Stored in `chrome.storage.local` (extension) or `localStorage` (web app).
 ## 9. Data flow
 
 ```
-popup.html (settings + start)
+index.html (settings + start)
     │
     ├── Session.start()
     │     ├── AudioCapture (getUserMedia + getDisplayMedia)
     │     ├── STT Provider (browser/deepgram)
     │     │     └── onTranscript → Analyzer.feed() + PiP
     │     └── Analyzer (LLM every 15s)
-    │           └── onUpdate → PiP postMessage
+    │           └── onUpdate → PiP UI update
     │
     └── documentPictureInPicture.requestWindow()
-          └── pip.js (floating overlay)
+          └── pip.ts (floating overlay, built from main context)
                 ├── Live transcript bar
                 ├── Insight tabs (configurable)
                 ├── Transcript / Chat / Summary tabs
-                └── postMessage → parent for chat/summary
+                └── Direct function calls for chat/summary
 ```
 
 ---
 
 ## 10. Acceptance criteria
 
-- [ ] Extension loads in Chrome and popup renders
+- [ ] Web app loads and main UI renders
 - [ ] Browser SpeechRecognition captures mic and produces transcript
-- [ ] Tab audio capture works via `getDisplayMedia`
+- [ ] System/tab audio capture works via `getDisplayMedia`
 - [ ] PiP window opens and displays live transcript
 - [ ] Insight tabs populate from LLM analysis
 - [ ] Chat works in PiP window
@@ -210,4 +205,4 @@ popup.html (settings + start)
 - [ ] Settings persist across sessions
 - [ ] Deepgram streaming STT works when API key provided
 - [ ] OpenAI and Anthropic LLM providers work
-- [ ] Free tier runs with zero backend (all API calls from extension)
+- [ ] Free tier runs with zero backend (all API calls from browser)

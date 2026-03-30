@@ -37,13 +37,14 @@ function renderKeyFields(sttProvider: string, llmProvider: string, config: Confi
     const field = KEY_FIELDS[id];
     if (!field) continue;
     const el = document.createElement("label");
-    el.innerHTML = `${field.label}<input type="password" data-key="${field.key}" value="${config[field.key] || ""}" />`;
+    el.className = "form-control w-full";
+    el.innerHTML = `<div class="label"><span class="label-text text-xs">${field.label}</span></div><input type="password" class="input input-bordered input-sm w-full" data-key="${field.key}" value="${config[field.key] || ""}" />`;
     container.appendChild(el);
   }
 }
 
-async function loadSettings(): Promise<void> {
-  const cfg = await loadConfig();
+function loadSettings(): void {
+  const cfg = loadConfig();
   $<HTMLSelectElement>("#stt-provider").value = cfg.sttProvider;
   $<HTMLSelectElement>("#stt-language").value = cfg.sttLanguage;
   $<HTMLSelectElement>("#llm-provider").value = cfg.llmProvider;
@@ -153,8 +154,8 @@ async function openPiP(): Promise<void> {
     height: 500,
   });
 
-  // Build the PiP UI directly from popup context — no script injection
-  buildPipUI(pipWindow.document, chrome.runtime.getURL("pip.css"), {
+  // Build the PiP UI directly from main context — no script injection needed
+  buildPipUI(pipWindow.document, "", {
     onChat: handlePipChat,
     onSummarize: handlePipSummarize,
   });

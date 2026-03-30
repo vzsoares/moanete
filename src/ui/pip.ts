@@ -2,11 +2,11 @@
  * PiP UI — builds and manages the floating overlay DOM.
  *
  * All functions operate on the PiP window's document but run in the
- * popup's JS context. No script injection needed.
+ * main app's JS context. No script injection needed.
  */
 import type { ChatMessage } from "../providers/llm/types.ts";
 import { toKey } from "../core/analyzer.ts";
-import PIP_CSS from "./pip.css?inline";
+import PIP_CSS from "./global.css?inline";
 
 let doc: Document | null = null;
 let chatHistory: ChatMessage[] = [];
@@ -26,45 +26,49 @@ export function buildPipUI(pipDoc: Document, _cssUrl: string, callbacks: PipCall
   chatHistory = [];
   transcriptBuffer.length = 0;
 
-  // Inline CSS — extension URLs can't be fetched from PiP window
+  // Inline CSS — PiP window can't access parent stylesheets
   const style = doc.createElement("style");
   style.textContent = PIP_CSS;
   doc.head.appendChild(style);
 
   // Build DOM
+  doc.body.setAttribute("data-theme", "dark");
+  doc.body.className = "h-screen flex flex-col overflow-hidden bg-base-200 text-base-content text-sm";
   doc.body.innerHTML = `
-    <header>
-      <span class="dot"></span>
-      <h1>moanete</h1>
+    <header class="flex items-center gap-2 px-3 py-1.5 bg-base-300 border-b border-base-content/10 shrink-0">
+      <span class="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></span>
+      <h1 class="text-sm font-semibold text-primary">moanete</h1>
     </header>
 
-    <div id="live-transcript"><strong>Transcript</strong> listening...</div>
-
-    <div class="tab-bar" id="top-tabs"></div>
-    <div class="panels" id="top-panels"></div>
-
-    <div class="tab-bar" id="bottom-tabs">
-      <button class="active" data-panel="transcript-panel">Transcript</button>
-      <button data-panel="chat-panel">Chat</button>
-      <button data-panel="summary-panel">Summary</button>
+    <div id="live-transcript" class="px-3 py-1.5 bg-base-300 border-b border-base-content/10 text-xs text-base-content/60 truncate shrink-0 min-h-7">
+      <strong class="text-base-content/80">Transcript</strong> listening...
     </div>
 
-    <div class="panels" id="bottom-panels" style="flex:2">
-      <div class="panel active" id="transcript-panel">
-        <div id="full-transcript" class="empty">Waiting for speech...</div>
+    <div class="tabs tabs-bordered shrink-0 bg-base-300" id="top-tabs"></div>
+    <div class="relative flex-1 overflow-hidden" id="top-panels"></div>
+
+    <div class="tabs tabs-bordered shrink-0 bg-base-300" id="bottom-tabs">
+      <button class="tab tab-active" data-panel="transcript-panel">Transcript</button>
+      <button class="tab" data-panel="chat-panel">Chat</button>
+      <button class="tab" data-panel="summary-panel">Summary</button>
+    </div>
+
+    <div class="relative flex-2 overflow-hidden" id="bottom-panels">
+      <div class="panel-item absolute inset-0 p-2 overflow-y-auto block" id="transcript-panel">
+        <div id="full-transcript" class="whitespace-pre-wrap leading-relaxed text-xs text-base-content/50 italic">Waiting for speech...</div>
       </div>
 
-      <div class="panel" id="chat-panel" style="display:none;flex-direction:column">
-        <div id="chat-messages"></div>
-        <div id="chat-input-row">
-          <input type="text" id="chat-input" placeholder="Ask about the meeting..." />
-          <button id="btn-send">Send</button>
+      <div class="panel-item absolute inset-0 p-2 overflow-y-auto hidden flex-col" id="chat-panel">
+        <div id="chat-messages" class="flex-1 overflow-y-auto flex flex-col gap-1.5"></div>
+        <div id="chat-input-row" class="flex gap-1 pt-1.5 shrink-0">
+          <input type="text" id="chat-input" class="input input-bordered input-sm flex-1" placeholder="Ask about the meeting..." />
+          <button id="btn-send" class="btn btn-primary btn-sm">Send</button>
         </div>
       </div>
 
-      <div class="panel" id="summary-panel">
-        <button id="btn-summarize">Generate Summary</button>
-        <div id="summary-content" class="empty">No summary yet.</div>
+      <div class="panel-item absolute inset-0 p-2 overflow-y-auto hidden" id="summary-panel">
+        <button id="btn-summarize" class="btn btn-ghost btn-sm mb-2">Generate Summary</button>
+        <div id="summary-content" class="whitespace-pre-wrap leading-relaxed text-base-content/50 italic">No summary yet.</div>
       </div>
     </div>
   `;
@@ -84,23 +88,23 @@ export function destroyPipUI(): void {
 
 function setupTabSwitching(): void {
   if (!doc) return;
-  for (const bar of doc.querySelectorAll<HTMLDivElement>(".tab-bar")) {
+  for (const bar of doc.querySelectorAll<HTMLDivElement>(".tabs")) {
     bar.addEventListener("click", (e) => {
       const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-panel]");
       if (!btn || !doc) return;
 
       const panelsContainer = bar.nextElementSibling as HTMLElement;
-      for (const b of bar.querySelectorAll("button")) b.classList.remove("active");
-      for (const p of panelsContainer.querySelectorAll<HTMLElement>(".panel")) {
-        p.classList.remove("active");
-        p.style.display = "none";
+      for (const b of bar.querySelectorAll("button")) b.classList.remove("tab-active");
+      for (const p of panelsContainer.querySelectorAll<HTMLElement>(".panel-item")) {
+        p.classList.add("hidden");
+        p.classList.remove("block", "flex");
       }
 
-      btn.classList.add("active");
+      btn.classList.add("tab-active");
       const panel = doc.getElementById(btn.dataset.panel!);
       if (panel) {
-        panel.classList.add("active");
-        panel.style.display = btn.dataset.panel === "chat-panel" ? "flex" : "block";
+        panel.classList.remove("hidden");
+        panel.classList.add(btn.dataset.panel === "chat-panel" ? "flex" : "block");
       }
     });
   }
@@ -130,7 +134,7 @@ function setupChat(): void {
 export function appendChat(role: string, text: string): void {
   if (!doc) return;
   const el = doc.createElement("div");
-  el.className = `chat-msg ${role}`;
+  el.className = `text-sm leading-snug ${role === "user" ? "text-info" : "text-success"}`;
   el.textContent = `${role === "user" ? "You" : "moanete"}: ${text}`;
   doc.getElementById("chat-messages")!.appendChild(el);
   el.scrollIntoView({ behavior: "smooth" });
@@ -148,7 +152,7 @@ function setupSummary(): void {
   doc.getElementById("btn-summarize")!.addEventListener("click", () => {
     const el = doc!.getElementById("summary-content")!;
     el.textContent = "Generating...";
-    el.classList.remove("empty");
+    el.className = "whitespace-pre-wrap leading-relaxed";
     onSummarize?.();
   });
 }
@@ -157,7 +161,7 @@ export function setSummary(text: string): void {
   if (!doc) return;
   const el = doc.getElementById("summary-content")!;
   el.textContent = text;
-  el.classList.remove("empty");
+  el.className = "whitespace-pre-wrap leading-relaxed";
 }
 
 // --- Insights ---
@@ -173,15 +177,15 @@ export function rebuildInsightTabs(categories: string[]): void {
   categories.forEach((name, i) => {
     const key = toKey(name);
     const btn = doc!.createElement("button");
+    btn.className = `tab${i === 0 ? " tab-active" : ""}`;
     btn.textContent = name;
     btn.dataset.panel = `insight-${key}`;
-    if (i === 0) btn.classList.add("active");
     topTabs.appendChild(btn);
 
     const panel = doc!.createElement("div");
-    panel.className = `panel${i === 0 ? " active" : ""}`;
+    panel.className = `panel-item absolute inset-0 p-2 overflow-y-auto ${i === 0 ? "block" : "hidden"}`;
     panel.id = `insight-${key}`;
-    panel.innerHTML = '<div class="empty">Nothing yet...</div>';
+    panel.innerHTML = '<div class="text-base-content/50 italic">Nothing yet...</div>';
     topPanels.appendChild(panel);
   });
 }
@@ -193,11 +197,13 @@ export function updateInsights(insights: Record<string, string[]>): void {
     if (!panel) continue;
 
     if (items.length === 0) {
-      panel.innerHTML = '<div class="empty">Nothing yet...</div>';
+      panel.innerHTML = '<div class="text-base-content/50 italic">Nothing yet...</div>';
     } else {
       const ul = doc.createElement("ul");
+      ul.className = "list-disc list-inside flex flex-col gap-1 marker:text-primary";
       for (const item of items.slice(-10)) {
         const li = doc.createElement("li");
+        li.className = "leading-snug";
         li.textContent = item;
         ul.appendChild(li);
       }
@@ -213,7 +219,7 @@ export function pipAppendTranscript(text: string): void {
   if (!doc) return;
   transcriptBuffer.push(text);
   const el = doc.getElementById("full-transcript")!;
-  el.classList.remove("empty");
+  el.className = "whitespace-pre-wrap leading-relaxed text-xs";
   el.textContent = transcriptBuffer.join("\n");
   el.scrollTop = el.scrollHeight;
 
@@ -221,7 +227,7 @@ export function pipAppendTranscript(text: string): void {
   const live = doc.getElementById("live-transcript")!;
   const full = transcriptBuffer.join(" ");
   const tail = full.length > 200 ? `...${full.slice(-200)}` : full;
-  live.innerHTML = `<strong>Transcript</strong> ${tail}`;
+  live.innerHTML = `<strong class="text-base-content/80">Transcript</strong> ${tail}`;
 }
 
 export function seedPipState(

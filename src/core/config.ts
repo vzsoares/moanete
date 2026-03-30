@@ -36,41 +36,26 @@ export const DEFAULTS: Config = {
   theme: "dark",
 };
 
-interface Storage {
-  get(): Promise<Partial<Config>>;
-  set(data: Partial<Config>): Promise<void>;
-}
+const STORAGE_KEY = "moanete-config";
 
-const storage: Storage =
-  typeof chrome !== "undefined" && chrome.storage
-    ? {
-        async get() {
-          return new Promise((resolve) =>
-            chrome.storage.local.get(null, (items) => resolve(items as Partial<Config>)),
-          );
-        },
-        async set(data) {
-          return new Promise((resolve) => chrome.storage.local.set(data, resolve));
-        },
-      }
-    : {
-        async get() {
-          const raw = localStorage.getItem("moanete-config");
-          return raw ? (JSON.parse(raw) as Partial<Config>) : {};
-        },
-        async set(data) {
-          const existing = JSON.parse(
-            localStorage.getItem("moanete-config") || "{}",
-          ) as Partial<Config>;
-          localStorage.setItem("moanete-config", JSON.stringify({ ...existing, ...data }));
-        },
-      };
+const storage = {
+  get(): Partial<Config> {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Partial<Config>) : {};
+  },
+  set(data: Partial<Config>): void {
+    const existing = JSON.parse(
+      localStorage.getItem(STORAGE_KEY) || "{}",
+    ) as Partial<Config>;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...existing, ...data }));
+  },
+};
 
-export async function loadConfig(): Promise<Config> {
-  const saved = await storage.get();
+export function loadConfig(): Config {
+  const saved = storage.get();
   return { ...DEFAULTS, ...saved };
 }
 
-export async function saveConfig(partial: Partial<Config>): Promise<void> {
-  await storage.set(partial);
+export function saveConfig(partial: Partial<Config>): void {
+  storage.set(partial);
 }

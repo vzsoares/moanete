@@ -1,15 +1,10 @@
 import { defineConfig } from "vite";
-import webExtension from "vite-plugin-web-extension";
+import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  plugins: [
-    webExtension({
-      manifest: "manifest.json",
-    }),
-  ],
+  plugins: [tailwindcss()],
   build: {
     outDir: "dist",
     emptyOutDir: true,
   },
-  base: "",
 });

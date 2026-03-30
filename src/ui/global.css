@@ -1,0 +1,12 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "daisyui" {
+  themes: dark --default;
+}
+
+.dot {
+  @apply w-2 h-2 rounded-full inline-block;
+}
+.dot.off { @apply bg-base-content/30; }
+.dot.on { @apply bg-success animate-pulse; }
+.dot.error { @apply bg-error; }
