@@ -88,7 +88,7 @@
 - [x] **Full web app UI** — dashboard layout with navbar, transcript, insights, chat, summary
 - [x] Dashboard view: live transcript (left), insights + chat (right), summary (footer)
 - [x] Settings in modal dialog (gear icon in navbar)
-- [ ] Session history browser
+- [x] Session history browser (clock icon in navbar, modal with list/detail/export/delete)
 - [x] **Simplify PiP overlay** — minimal floating widget with mic/PC status dots, single content area with transcript/insights/summary toggle
 
 ### Fix PiP bugs
@@ -111,15 +111,16 @@
 
 ---
 
-## Phase 3: Session History
+## Phase 3: Session History (done)
 
-- [ ] Define session data model: id, timestamp, transcript, insights, summary
-- [ ] Store sessions in IndexedDB
-- [ ] Auto-save transcript and insights on session end
-- [ ] Save final summary if one was generated
-- [ ] Session list view (date, duration, preview)
-- [ ] Session detail view (full transcript + insights)
-- [ ] Export session as markdown
+- [x] Define session data model: id, timestamps, transcript lines (with source + timestamp), insights, summary, categories
+- [x] Store sessions in IndexedDB (`src/core/storage.ts`)
+- [x] Auto-save transcript and insights on session stop
+- [x] Save summary if one was generated before stopping
+- [x] Session list view (date, duration, preview) — history modal
+- [x] Session detail view (full transcript with You/Them labels + insights + summary)
+- [x] Export session as markdown (download .md file)
+- [x] Resume session — loads prior transcript/insights into a new session, continues from where it left off
 
 ---
 

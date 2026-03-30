@@ -97,6 +97,18 @@ export class Analyzer {
     }
   }
 
+  seedInsights(prior: Record<string, string[]>): void {
+    for (const key of this._keys) {
+      const items = prior[key];
+      if (!items) continue;
+      const existing = this._insights[key];
+      if (!existing) continue;
+      for (const item of items) {
+        if (!existing.includes(item)) existing.push(item);
+      }
+    }
+  }
+
   updateCategories(categories: string[]): void {
     this._categories = categories;
     this._keys = categories.map(toKey);

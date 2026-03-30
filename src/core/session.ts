@@ -6,6 +6,7 @@ import { Analyzer } from "./analyzer.ts";
 import { AudioCapture, type AudioSource } from "./audio.ts";
 import { loadConfig } from "./config.ts";
 import type { Config } from "./config.ts";
+import { type TranscriptLine, saveSession } from "./storage.ts";
 
 // Register all providers (side-effect imports)
 import "../providers/stt/browser.ts";
@@ -28,6 +29,9 @@ export class Session {
   private _analyzer: Analyzer | null = null;
   private _running = false;
   private _config: Config | null = null;
+  private _startedAt = 0;
+  private _transcriptLines: TranscriptLine[] = [];
+  private _summary = "";
 
   onTranscript: ((entry: TranscriptEntry) => void) | null = null;
   onInsights: ((insights: Record<string, string[]>) => void) | null = null;
@@ -47,7 +51,38 @@ export class Session {
     return this._running;
   }
 
+  get summary(): string {
+    return this._summary;
+  }
+
+  set summary(value: string) {
+    this._summary = value;
+  }
+
+  /** Seed with a prior session's data before calling start() */
+  seedFrom(prior: {
+    transcript: TranscriptLine[];
+    insights: Record<string, string[]>;
+    summary: string;
+  }): void {
+    this._transcriptLines = [...prior.transcript];
+    this._summary = prior.summary;
+    this._priorInsights = prior.insights;
+    this._priorTranscriptText = prior.transcript
+      .map((l) => {
+        const label = l.source === "mic" ? "[You]" : "[Them]";
+        return `${label} ${l.text}`;
+      })
+      .join(" ");
+  }
+
+  private _priorInsights: Record<string, string[]> | null = null;
+  private _priorTranscriptText = "";
+
   async start(): Promise<void> {
+    this._startedAt = Date.now();
+    if (!this._transcriptLines.length) this._transcriptLines = [];
+    if (!this._summary) this._summary = "";
     this._config = await loadConfig();
     const cfg = this._config;
 
@@ -77,6 +112,14 @@ export class Session {
     });
     this._analyzer.onUpdate = (insights) => this.onInsights?.(insights);
 
+    // Seed analyzer with prior session data
+    if (this._priorTranscriptText) {
+      this._analyzer.feed(this._priorTranscriptText);
+    }
+    if (this._priorInsights) {
+      this._analyzer.seedInsights(this._priorInsights);
+    }
+
     // Init audio capture
     this._audio = new AudioCapture();
 
@@ -105,6 +148,7 @@ export class Session {
       this._micSTT.configure(sttConfig);
       this._micSTT.start((text) => {
         this._analyzer!.feed(`[You] ${text}`);
+        this._transcriptLines.push({ source: "mic", text, timestamp: Date.now() });
         this.onTranscript?.({ source: "mic", text });
       });
     }
@@ -118,6 +162,7 @@ export class Session {
         this._tabSTT.configure(sttConfig);
         this._tabSTT.start((text) => {
           this._analyzer!.feed(`[Them] ${text}`);
+          this._transcriptLines.push({ source: "tab", text, timestamp: Date.now() });
           this.onTranscript?.({ source: "tab", text });
         });
       } else {
@@ -168,11 +213,26 @@ export class Session {
     return null;
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
     this._running = false;
     this._analyzer?.stop();
     this._micSTT?.stop();
     this._tabSTT?.stop();
     this._audio?.stop();
+
+    // Auto-save to IndexedDB
+    if (this._transcriptLines.length > 0 && this._analyzer) {
+      const now = Date.now();
+      await saveSession({
+        id: `session-${this._startedAt}`,
+        startedAt: this._startedAt,
+        endedAt: now,
+        duration: now - this._startedAt,
+        transcript: this._transcriptLines,
+        insights: this._analyzer.insights,
+        summary: this._summary,
+        categories: this._analyzer.categories,
+      });
+    }
   }
 }

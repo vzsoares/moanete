@@ -1,6 +1,12 @@
 import { toKey } from "../core/analyzer.ts";
 import { type Config, loadConfig, saveConfig } from "../core/config.ts";
 import { Session, type TranscriptEntry } from "../core/session.ts";
+import {
+  type StoredSession,
+  deleteSession,
+  exportSessionMarkdown,
+  listSessions,
+} from "../core/storage.ts";
 import { answerQuestion, summarizeTranscript } from "../core/summarizer.ts";
 import type { ChatMessage } from "../providers/llm/types.ts";
 import {
@@ -93,8 +99,31 @@ function setStatus(state: string, text: string): void {
   $<HTMLSpanElement>("#status-text").textContent = text;
 }
 
-async function startSession(): Promise<void> {
+async function resumeFromSession(stored: StoredSession): Promise<void> {
   session = new Session();
+  session.seedFrom({
+    transcript: stored.transcript,
+    insights: stored.insights,
+    summary: stored.summary,
+  });
+
+  // Pre-fill the transcript UI with prior lines
+  const container = $<HTMLDivElement>("#transcript-content");
+  container.innerHTML = "";
+  container.className = "text-sm leading-relaxed whitespace-pre-wrap break-words";
+  for (const line of stored.transcript) {
+    const div = document.createElement("div");
+    const label = line.source === "mic" ? "You" : "Them";
+    const color = line.source === "mic" ? "text-info" : "text-warning";
+    div.innerHTML = `<span class="${color} font-semibold">${label}:</span> ${escapeHtml(line.text)}`;
+    container.appendChild(div);
+  }
+
+  await startSession(true);
+}
+
+async function startSession(resumed?: boolean): Promise<void> {
+  if (!session) session = new Session();
 
   session.onTranscript = (entry: TranscriptEntry) => {
     appendTranscript(entry);
@@ -144,25 +173,28 @@ async function startSession(): Promise<void> {
     const cfg = loadConfig();
     $<HTMLSpanElement>("#tab-level").parentElement!.hidden = !cfg.captureTab;
 
-    // Reset transcript
-    const el = $<HTMLDivElement>("#transcript-content");
-    el.textContent = "Listening...";
-    el.className =
-      "text-sm leading-relaxed text-base-content/50 italic whitespace-pre-wrap break-words";
+    // Reset transcript (unless resuming — already pre-filled)
+    if (!resumed) {
+      const el = $<HTMLDivElement>("#transcript-content");
+      el.textContent = "Listening...";
+      el.className =
+        "text-sm leading-relaxed text-base-content/50 italic whitespace-pre-wrap break-words";
+    }
   } catch (e) {
     setStatus("error", e instanceof Error ? e.message : String(e));
   }
 }
 
-function stopSession(): void {
-  session?.stop();
+async function stopSession(): Promise<void> {
+  await session?.stop();
   session = null;
-  setStatus("off", "Stopped");
+  setStatus("off", "Stopped — session saved");
   $<HTMLButtonElement>("#btn-start").hidden = false;
   $<HTMLButtonElement>("#btn-stop").hidden = true;
   $<HTMLButtonElement>("#btn-pip").hidden = true;
   $<HTMLDivElement>("#audio-indicators").hidden = true;
   pipWindow?.close();
+  await renderSessionHistory();
 }
 
 // --- Transcript display ---
@@ -287,6 +319,7 @@ function setupSummary(): void {
     try {
       const summary = await summarizeTranscript(session.llm, session.analyzer.transcript);
       el.textContent = summary;
+      session.summary = summary;
     } catch (e) {
       el.textContent = `Error: ${e instanceof Error ? e.message : String(e)}`;
     }
@@ -303,16 +336,8 @@ async function openPiP(): Promise<void> {
     return;
   }
 
-  pipWindow = await (
-    window as unknown as {
-      documentPictureInPicture: {
-        requestWindow(opts: { width: number; height: number }): Promise<Window>;
-      };
-    }
-  ).documentPictureInPicture.requestWindow({
-    width: 400,
-    height: 500,
-  });
+  if (!window.documentPictureInPicture) return;
+  pipWindow = await window.documentPictureInPicture.requestWindow({ width: 400, height: 500 });
 
   buildPipUI(pipWindow.document, "", {
     onChat: handlePipChat,
@@ -373,7 +398,7 @@ function detectCompatHints(): void {
   const hints: string[] = [];
   const ua = navigator.userAgent;
   const isFirefox = ua.includes("Firefox");
-  const isChromium = !!(window as unknown as Record<string, unknown>).chrome;
+  const isChromium = "chrome" in window;
   const isMac = ua.includes("Macintosh");
   const isLinux = ua.includes("Linux");
 
@@ -425,6 +450,146 @@ function rebuildDashboardInsightTabs(categories: string[]): void {
     panel.innerHTML = '<p class="text-xs text-base-content/40 italic">Nothing yet...</p>';
     panels.appendChild(panel);
   });
+}
+
+// --- Session history ---
+
+async function renderSessionHistory(): Promise<void> {
+  const sessions = await listSessions();
+  const list = $<HTMLDivElement>("#history-list");
+  const detail = $<HTMLDivElement>("#history-detail");
+  const backBtn = $<HTMLButtonElement>("#btn-history-back");
+
+  detail.classList.add("hidden");
+  detail.innerHTML = "";
+  list.classList.remove("hidden");
+  backBtn.classList.add("hidden");
+
+  if (sessions.length === 0) {
+    list.innerHTML = '<p class="text-sm text-base-content/40 italic">No sessions yet.</p>';
+    return;
+  }
+
+  list.innerHTML = "";
+  for (const s of sessions) {
+    const date = new Date(s.startedAt).toLocaleString();
+    const dur = formatDur(s.duration);
+    const preview =
+      s.transcript
+        .slice(0, 2)
+        .map((l) => l.text)
+        .join(" ") || "Empty session";
+
+    const card = document.createElement("div");
+    card.className =
+      "bg-base-200 rounded-lg p-3 cursor-pointer hover:bg-base-300 transition-colors border border-base-content/5";
+    card.innerHTML = `
+      <div class="flex justify-between items-center mb-1">
+        <span class="text-xs font-semibold">${date}</span>
+        <span class="badge badge-sm badge-ghost">${dur}</span>
+      </div>
+      <p class="text-xs text-base-content/60 truncate">${escapeHtml(preview)}</p>
+      <div class="flex gap-1 mt-2">
+        <button class="btn btn-xs btn-primary resume-btn">Resume</button>
+        <button class="btn btn-xs btn-ghost view-btn">View</button>
+        <button class="btn btn-xs btn-ghost export-btn">Export</button>
+        <button class="btn btn-xs btn-ghost text-error delete-btn">Delete</button>
+      </div>
+    `;
+
+    card.querySelector(".view-btn")!.addEventListener("click", (e) => {
+      e.stopPropagation();
+      showSessionDetail(s);
+    });
+
+    card.querySelector(".export-btn")!.addEventListener("click", (e) => {
+      e.stopPropagation();
+      downloadMarkdown(s);
+    });
+
+    card.querySelector(".delete-btn")!.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      await deleteSession(s.id);
+      await renderSessionHistory();
+    });
+
+    card.querySelector(".resume-btn")!.addEventListener("click", (e) => {
+      e.stopPropagation();
+      $<HTMLDialogElement>("#history-modal").close();
+      resumeFromSession(s);
+    });
+
+    list.appendChild(card);
+  }
+}
+
+function showSessionDetail(s: StoredSession): void {
+  const list = $<HTMLDivElement>("#history-list");
+  const detail = $<HTMLDivElement>("#history-detail");
+  const backBtn = $<HTMLButtonElement>("#btn-history-back");
+
+  list.classList.add("hidden");
+  detail.classList.remove("hidden");
+  backBtn.classList.remove("hidden");
+
+  const date = new Date(s.startedAt).toLocaleString();
+  const dur = formatDur(s.duration);
+
+  let html = `<h4 class="text-sm font-bold mb-3">${date} (${dur})</h4>`;
+
+  // Transcript
+  html += '<h5 class="text-xs font-semibold text-primary mb-1">Transcript</h5>';
+  html += '<div class="mb-4 flex flex-col gap-1">';
+  for (const line of s.transcript) {
+    const label = line.source === "mic" ? "You" : "Them";
+    const color = line.source === "mic" ? "text-info" : "text-warning";
+    html += `<div class="text-xs"><span class="${color} font-semibold">${label}:</span> ${escapeHtml(line.text)}</div>`;
+  }
+  html += "</div>";
+
+  // Insights
+  for (const cat of s.categories) {
+    const key = toKey(cat);
+    const items = s.insights[key] || [];
+    html += `<h5 class="text-xs font-semibold text-primary mb-1">${escapeHtml(cat)}</h5>`;
+    if (items.length === 0) {
+      html += '<p class="text-xs text-base-content/40 italic mb-3">Nothing</p>';
+    } else {
+      html += '<div class="flex flex-col gap-1 mb-3">';
+      for (const item of items) {
+        html += `<div class="bg-base-300 rounded px-2 py-1 text-xs border-l-2 border-primary">${escapeHtml(item)}</div>`;
+      }
+      html += "</div>";
+    }
+  }
+
+  // Summary
+  if (s.summary) {
+    html += '<h5 class="text-xs font-semibold text-primary mb-1">Summary</h5>';
+    html += `<p class="text-xs leading-relaxed whitespace-pre-wrap">${escapeHtml(s.summary)}</p>`;
+  }
+
+  detail.innerHTML = html;
+}
+
+function downloadMarkdown(s: StoredSession): void {
+  const md = exportSessionMarkdown(s);
+  const blob = new Blob([md], { type: "text/markdown" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `moanete-${new Date(s.startedAt).toISOString().slice(0, 10)}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function formatDur(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  if (h > 0) return `${h}h ${m % 60}m`;
+  if (m > 0) return `${m}m ${s % 60}s`;
+  return `${s}s`;
 }
 
 // --- Event listeners ---
@@ -482,7 +647,19 @@ document.addEventListener("DOMContentLoaded", () => {
     $<HTMLDialogElement>("#settings-modal").close();
   });
 
-  $<HTMLButtonElement>("#btn-start").addEventListener("click", startSession);
+  // History modal
+  $<HTMLButtonElement>("#btn-history").addEventListener("click", async () => {
+    await renderSessionHistory();
+    $<HTMLDialogElement>("#history-modal").showModal();
+  });
+
+  $<HTMLButtonElement>("#btn-history-back").addEventListener("click", () => {
+    $<HTMLDivElement>("#history-list").classList.remove("hidden");
+    $<HTMLDivElement>("#history-detail").classList.add("hidden");
+    $<HTMLButtonElement>("#btn-history-back").classList.add("hidden");
+  });
+
+  $<HTMLButtonElement>("#btn-start").addEventListener("click", () => startSession());
   $<HTMLButtonElement>("#btn-stop").addEventListener("click", stopSession);
   $<HTMLButtonElement>("#btn-pip").addEventListener("click", openPiP);
 });

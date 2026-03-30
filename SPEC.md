@@ -150,7 +150,7 @@ Minimal floating readout — no complex tabs or chat input.
 
 ## 8. Configuration
 
-Stored in `localStorage`.
+App settings stored in `localStorage`. Session history stored in IndexedDB.
 
 | Key | Default | Description |
 |-----|---------|-------------|
