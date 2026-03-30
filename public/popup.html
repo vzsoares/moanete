@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>moanete</title>
+  <link rel="stylesheet" href="../src/ui/popup.css" />
+</head>
+
+<body>
+  <div id="app">
+    <h1>moanete</h1>
+    <p class="subtitle">meeting assistant</p>
+
+    <section id="status">
+      <span id="status-dot" class="dot off"></span>
+      <span id="status-text">Stopped</span>
+    </section>
+
+    <button id="btn-start" class="primary">Start Session</button>
+    <button id="btn-stop" class="danger" hidden>Stop</button>
+    <button id="btn-pip" hidden>Pop Out (PiP)</button>
+
+    <div id="transcript-box" hidden>
+      <div id="transcript-content">Listening...</div>
+    </div>
+
+    <hr />
+
+    <details>
+      <summary>Settings</summary>
+      <div class="settings">
+        <label>
+          STT Provider
+          <select id="stt-provider">
+            <option value="browser">Browser (free)</option>
+            <option value="deepgram">Deepgram</option>
+          </select>
+        </label>
+
+        <label>
+          Language
+          <select id="stt-language">
+            <option value="en-US">English (US)</option>
+            <option value="en-GB">English (UK)</option>
+            <option value="pt-BR">Portuguese (Brazil)</option>
+            <option value="pt-PT">Portuguese (Portugal)</option>
+            <option value="es-ES">Spanish (Spain)</option>
+            <option value="es-MX">Spanish (Mexico)</option>
+            <option value="fr-FR">French</option>
+            <option value="de-DE">German</option>
+            <option value="it-IT">Italian</option>
+            <option value="ja-JP">Japanese</option>
+            <option value="ko-KR">Korean</option>
+            <option value="zh-CN">Chinese (Simplified)</option>
+            <option value="zh-TW">Chinese (Traditional)</option>
+            <option value="ru-RU">Russian</option>
+            <option value="ar-SA">Arabic</option>
+            <option value="hi-IN">Hindi</option>
+            <option value="nl-NL">Dutch</option>
+            <option value="pl-PL">Polish</option>
+            <option value="tr-TR">Turkish</option>
+            <option value="uk-UA">Ukrainian</option>
+          </select>
+        </label>
+
+        <label>
+          LLM Provider
+          <select id="llm-provider">
+            <option value="ollama">Ollama (local)</option>
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+          </select>
+        </label>
+
+        <div id="key-fields"></div>
+
+        <label>
+          Insight Tabs
+          <input
+            type="text"
+            id="insight-tabs"
+            placeholder="Suggestions,Key Points,Action Items,Questions"
+          />
+        </label>
+
+        <div class="presets">
+          <button data-preset="Suggestions,Key Points,Action Items,Questions">Meeting</button>
+          <button data-preset="Code Topics,Technical Questions,Red Flags,Strengths">Interview</button>
+          <button data-preset="Bugs,Design Decisions,TODOs,Questions">Pair Programming</button>
+          <button data-preset="Key Concepts,Examples,Questions,References">Lecture</button>
+        </div>
+
+        <label class="checkbox">
+          <input type="checkbox" id="capture-mic" checked /> Microphone
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="capture-tab" /> Tab / System Audio
+        </label>
+
+        <button id="btn-save" class="small">Save Settings</button>
+      </div>
+    </details>
+  </div>
+  <script type="module" src="../src/ui/popup.ts"></script>
+</body>
+</html>

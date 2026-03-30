@@ -1,15 +1,8 @@
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-*.egg
-dist/
-build/
-*.whl
+# Dependencies
+node_modules/
 
-# Virtual environments
-.venv/
-venv/
+# Build output
+dist/
 
 # IDE
 .idea/
@@ -22,8 +15,9 @@ venv/
 .DS_Store
 Thumbs.db
 
-# Config (user-specific)
-config.env
-
 # Logs
 *.log
+
+# Env
+.env
+.env.local

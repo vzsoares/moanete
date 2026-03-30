@@ -1,0 +1,42 @@
+import { registerLLM, type LLMProvider } from "./types.ts";
+
+function createOllamaLLM(): LLMProvider {
+  let host = "http://localhost:11434";
+  let model = "llama3.2";
+
+  return {
+    name: "Ollama (local)",
+    requiresKey: false,
+
+    configure(config) {
+      host = config.host || host;
+      model = config.model || model;
+    },
+
+    async chat(messages, opts = {}) {
+      const payload = {
+        model,
+        messages: opts.system
+          ? [{ role: "system", content: opts.system }, ...messages]
+          : messages,
+        stream: false,
+        options: { num_predict: opts.maxTokens || 1024 },
+      };
+
+      const res = await fetch(`${host}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Ollama error (${res.status}): ${await res.text()}`);
+      }
+
+      const data = await res.json();
+      return data.message.content;
+    },
+  };
+}
+
+registerLLM("ollama", createOllamaLLM);

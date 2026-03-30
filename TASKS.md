@@ -1,6 +1,13 @@
 # moanete — Task Roadmap
 
-## Phase 1: Fix What's Broken
+## Phase 1: TUI Prototype (archived)
+
+> The Python TUI (`src/moanete/`) served as the initial prototype. All tasks
+> completed. Code remains in the repo for reference but is no longer the active
+> frontend. The web-based Chrome Extension is now the sole focus.
+
+<details>
+<summary>Completed TUI tasks</summary>
 
 ### UI: Transcript/Chat/Summary tabs not working
 - [x] Debug TabbedContent rendering — replaced CSS grid with vertical layout (TabbedContent breaks inside grid)
@@ -40,28 +47,72 @@
 - [x] Hardened LLM prompts — "court stenographer" framing, never refuses any topic
 - [x] Clean shutdown — `threading.Event` instead of `time.sleep` for instant stop
 
+</details>
+
 ---
 
-## Phase 2: Session History
+## Phase 2: Chrome Extension — Core
 
-### Store sessions
+### Scaffold (done)
+- [x] Flatten repo — remove Python TUI, move web extension to root
+- [x] Project structure with Vite + Bun + Biome
+- [x] Chrome Extension Manifest V3
+- [x] Pluggable provider registry pattern (STT + LLM)
+- [x] STT providers: Browser SpeechRecognition (free), Deepgram (paid)
+- [x] LLM providers: Ollama (local/free), OpenAI, Anthropic
+- [x] Core engine ports: Analyzer, Summarizer, Audio capture, Config, Session orchestrator
+- [x] Popup UI: settings, session control, PiP launch
+- [x] PiP overlay UI: live transcript, tabbed insights, chat, summary
+- [x] Catppuccin-mocha theme for all UI
+
+### Make it runnable
+- [x] Add Vite config for extension bundling (`vite-plugin-web-extension`)
+- [x] Add extension icons (16/48/128px)
+- [x] Convert entire codebase to TypeScript (strict mode)
+- [x] Fix build output — relative paths, pip.ts bundled separately, pip.css as web-accessible resource
+- [x] PiP assets (pip.js + pip.css) in `web_accessible_resources` and built into dist
+- [ ] Test loading as unpacked extension in Chrome
+- [ ] Test Browser SpeechRecognition STT (free tier)
+- [ ] Test Deepgram WebSocket STT
+- [ ] Test Document PiP window lifecycle (open, close, reconnect)
+- [ ] Test tab audio capture via `getDisplayMedia`
+- [ ] Wire `tabCapture` in background service worker for cleaner audio capture
+
+### Polish
+- [ ] Config modal in PiP (preset switching, language)
+- [ ] Keyboard shortcuts in PiP
+- [ ] Screen capture via `getDisplayMedia` + vision LLM
+- [ ] Session export (markdown download)
+- [ ] Error toasts / status indicators in PiP
+
+---
+
+## Phase 3: Hosted Version
+
+- [ ] Backend proxy for Anthropic/OpenAI API calls (CORS)
+- [ ] Auth + user accounts
+- [ ] Billing / subscription management
+- [ ] Usage dashboard
+- [ ] Publish to Chrome Web Store
+
+---
+
+## Phase 4: Session History
+
 - [ ] Define session data model: id, timestamp, transcript, insights, summary
-- [ ] Store sessions as JSON files in `~/.local/share/moanete/sessions/`
-- [ ] Auto-save transcript and insights on quit (or periodically)
+- [ ] Store sessions in `chrome.storage.local` or IndexedDB
+- [ ] Auto-save transcript and insights on session end
 - [ ] Save final summary if one was generated
-
-### List and review sessions
-- [ ] `moanete --history` — list past sessions (date, duration, preview)
-- [ ] `moanete --history <id>` — print full transcript + insights for a session
-- [ ] `moanete --export <id>` — export session as markdown
-- [ ] Add "Sessions" tab in TUI to browse past meetings
+- [ ] Session list view in popup (date, duration, preview)
+- [ ] Session detail view (full transcript + insights)
+- [ ] Export session as markdown
 
 ---
 
-## Phase 3: MCP Integration
+## Phase 5: MCP Integration
 
 ### MCP server
-- [ ] Implement moanete as an MCP server (`mcp` protocol)
+- [ ] Implement moanete as an MCP server
 - [ ] Expose tools: `get_transcript`, `get_insights`, `get_summary`, `ask_question`
 - [ ] Expose resources: live transcript, current insights, session history
 - [ ] Allow AI assistants (Claude Code, etc.) to query the meeting in real-time
@@ -73,16 +124,10 @@
 
 ---
 
-## Phase 4: Skill / AI Integration
+## Phase 6: AI Enhancements
 
-### Claude Code skill
-- [ ] Create a Claude Code skill that connects to moanete's MCP server
-- [ ] Commands: `/meeting summary`, `/meeting ask <question>`, `/meeting actions`
-- [ ] Allow developers to query their ongoing meeting from the terminal
-
-### Ollama function calling
-- [ ] Use Ollama's tool/function calling for structured insight extraction
-- [ ] Replace JSON-prompt-and-parse with native structured output
+### Structured output
+- [ ] Use OpenAI/Anthropic structured output for insight extraction
 - [ ] More reliable than hoping the LLM outputs valid JSON
 
 ### Multi-agent
@@ -92,23 +137,9 @@
 
 ---
 
-## Phase 5: Cross-Platform & Testing
+## Phase 7: Testing & CI
 
-### System tests
-- [ ] Test on Arch/Manjaro (PipeWire + PulseAudio compat layer)
-- [ ] Test on Ubuntu/Debian (PulseAudio native)
-- [ ] Test on Fedora (PipeWire native)
-- [ ] Test on macOS (CoreAudio — no pactl, different monitor approach)
-- [ ] Test on NixOS (potential sandboxing issues with audio)
-- [ ] Document platform-specific quirks in README
-
-### macOS support
-- [ ] Replace `pactl` monitor detection with CoreAudio equivalent
-- [ ] Test `sounddevice` device probing on macOS
-- [ ] Handle macOS microphone permissions (prompt user)
-- [ ] Test with Homebrew-installed Ollama
-
-### CI
-- [ ] Add GitHub Actions workflow for lint + type check
-- [ ] Add integration test that runs with a mock audio stream
-- [ ] Add test for LLM abstraction with mock Ollama responses
+- [ ] Add GitHub Actions workflow for Biome check
+- [ ] Add integration test with mock audio stream
+- [ ] Add test for provider abstraction with mock API responses
+- [ ] Test Chrome Extension in CI (puppeteer or playwright)
