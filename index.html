@@ -118,87 +118,114 @@
 
   <!-- Settings modal -->
   <dialog id="settings-modal" class="modal">
-    <div class="modal-box">
+    <div class="modal-box max-w-lg max-h-[85vh] flex flex-col">
       <h3 class="text-lg font-bold mb-4">Settings</h3>
 
-      <div class="flex flex-col gap-3">
-        <label class="form-control w-full">
-          <div class="label"><span class="label-text text-xs">STT Provider</span></div>
-          <select id="stt-provider" class="select select-bordered select-sm w-full">
-            <option value="browser">Browser (free)</option>
-            <option value="whisper">Whisper (local)</option>
-            <option value="deepgram">Deepgram</option>
-          </select>
-        </label>
+      <div class="flex-1 overflow-y-auto flex flex-col gap-5 pr-1">
 
-        <label class="form-control w-full">
-          <div class="label"><span class="label-text text-xs">Language</span></div>
-          <select id="stt-language" class="select select-bordered select-sm w-full">
-            <option value="en-US">English (US)</option>
-            <option value="en-GB">English (UK)</option>
-            <option value="pt-BR">Portuguese (Brazil)</option>
-            <option value="pt-PT">Portuguese (Portugal)</option>
-            <option value="es-ES">Spanish (Spain)</option>
-            <option value="es-MX">Spanish (Mexico)</option>
-            <option value="fr-FR">French</option>
-            <option value="de-DE">German</option>
-            <option value="it-IT">Italian</option>
-            <option value="ja-JP">Japanese</option>
-            <option value="ko-KR">Korean</option>
-            <option value="zh-CN">Chinese (Simplified)</option>
-            <option value="zh-TW">Chinese (Traditional)</option>
-            <option value="ru-RU">Russian</option>
-            <option value="ar-SA">Arabic</option>
-            <option value="hi-IN">Hindi</option>
-            <option value="nl-NL">Dutch</option>
-            <option value="pl-PL">Polish</option>
-            <option value="tr-TR">Turkish</option>
-            <option value="uk-UA">Ukrainian</option>
-          </select>
-        </label>
+        <!-- Audio -->
+        <section>
+          <h4 class="text-xs font-semibold text-primary uppercase tracking-wide mb-2">Audio</h4>
+          <div class="flex gap-4 flex-wrap">
+            <label class="label cursor-pointer gap-2">
+              <input type="checkbox" id="capture-mic" class="checkbox checkbox-sm" checked />
+              <span class="label-text text-xs">Microphone</span>
+            </label>
+            <label class="label cursor-pointer gap-2">
+              <input type="checkbox" id="capture-tab" class="checkbox checkbox-sm" />
+              <span class="label-text text-xs">Tab / System Audio</span>
+            </label>
+          </div>
+        </section>
 
-        <label class="form-control w-full">
-          <div class="label"><span class="label-text text-xs">LLM Provider</span></div>
-          <select id="llm-provider" class="select select-bordered select-sm w-full">
-            <option value="ollama">Ollama (local)</option>
-            <option value="openai">OpenAI</option>
-            <option value="anthropic">Anthropic</option>
-          </select>
-        </label>
+        <!-- Speech-to-Text -->
+        <section>
+          <h4 class="text-xs font-semibold text-primary uppercase tracking-wide mb-2">Speech-to-Text</h4>
+          <div class="flex flex-col gap-2">
+            <label class="form-control w-full">
+              <div class="label"><span class="label-text text-xs">Provider</span></div>
+              <select id="stt-provider" class="select select-bordered select-sm w-full">
+                <option value="browser">Browser (free)</option>
+                <option value="whisper">Whisper (local)</option>
+                <option value="deepgram">Deepgram</option>
+              </select>
+            </label>
 
-        <div id="key-fields" class="flex flex-col gap-3"></div>
+            <label class="form-control w-full">
+              <div class="label"><span class="label-text text-xs">Language</span></div>
+              <select id="stt-language" class="select select-bordered select-sm w-full">
+                <option value="en-US">English (US)</option>
+                <option value="en-GB">English (UK)</option>
+                <option value="pt-BR">Portuguese (Brazil)</option>
+                <option value="pt-PT">Portuguese (Portugal)</option>
+                <option value="es-ES">Spanish (Spain)</option>
+                <option value="es-MX">Spanish (Mexico)</option>
+                <option value="fr-FR">French</option>
+                <option value="de-DE">German</option>
+                <option value="it-IT">Italian</option>
+                <option value="ja-JP">Japanese</option>
+                <option value="ko-KR">Korean</option>
+                <option value="zh-CN">Chinese (Simplified)</option>
+                <option value="zh-TW">Chinese (Traditional)</option>
+                <option value="ru-RU">Russian</option>
+                <option value="ar-SA">Arabic</option>
+                <option value="hi-IN">Hindi</option>
+                <option value="nl-NL">Dutch</option>
+                <option value="pl-PL">Polish</option>
+                <option value="tr-TR">Turkish</option>
+                <option value="uk-UA">Ukrainian</option>
+              </select>
+            </label>
 
-        <label class="form-control w-full">
-          <div class="label"><span class="label-text text-xs">Insight Tabs</span></div>
-          <input
-            type="text"
-            id="insight-tabs"
-            class="input input-bordered input-sm w-full"
-            placeholder="Suggestions,Key Points,Action Items,Questions"
-          />
-        </label>
+            <div id="stt-fields" class="flex flex-col gap-2"></div>
+          </div>
+        </section>
 
-        <div class="flex flex-wrap gap-1">
-          <button class="btn btn-xs btn-ghost" data-preset="Suggestions,Key Points,Action Items,Questions">Meeting</button>
-          <button class="btn btn-xs btn-ghost" data-preset="Code Topics,Technical Questions,Red Flags,Strengths">Interview</button>
-          <button class="btn btn-xs btn-ghost" data-preset="Bugs,Design Decisions,TODOs,Questions">Pair Programming</button>
-          <button class="btn btn-xs btn-ghost" data-preset="Key Concepts,Examples,Questions,References">Lecture</button>
-        </div>
+        <!-- LLM -->
+        <section>
+          <h4 class="text-xs font-semibold text-primary uppercase tracking-wide mb-2">LLM</h4>
+          <div class="flex flex-col gap-2">
+            <label class="form-control w-full">
+              <div class="label"><span class="label-text text-xs">Provider</span></div>
+              <select id="llm-provider" class="select select-bordered select-sm w-full">
+                <option value="ollama">Ollama (local)</option>
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic</option>
+              </select>
+            </label>
 
-        <div class="flex gap-4 flex-wrap">
-          <label class="label cursor-pointer gap-2">
-            <input type="checkbox" id="capture-mic" class="checkbox checkbox-sm" checked />
-            <span class="label-text text-xs">Microphone</span>
-          </label>
-          <label class="label cursor-pointer gap-2">
-            <input type="checkbox" id="capture-tab" class="checkbox checkbox-sm" />
-            <span class="label-text text-xs">Tab / System Audio</span>
-          </label>
-          <label class="label cursor-pointer gap-2">
-            <input type="checkbox" id="multi-agent" class="checkbox checkbox-sm" checked />
-            <span class="label-text text-xs">Multi-agent analysis</span>
-          </label>
-        </div>
+            <div id="llm-fields" class="flex flex-col gap-2"></div>
+          </div>
+        </section>
+
+        <!-- Analysis -->
+        <section>
+          <h4 class="text-xs font-semibold text-primary uppercase tracking-wide mb-2">Analysis</h4>
+          <div class="flex flex-col gap-2">
+            <label class="form-control w-full">
+              <div class="label"><span class="label-text text-xs">Insight Categories</span></div>
+              <input type="text" id="insight-tabs" class="input input-bordered input-sm w-full" placeholder="Suggestions,Key Points,Action Items,Questions" />
+            </label>
+
+            <div class="flex flex-wrap gap-1">
+              <button class="btn btn-xs btn-ghost" data-preset="Suggestions,Key Points,Action Items,Questions">Meeting</button>
+              <button class="btn btn-xs btn-ghost" data-preset="Code Topics,Technical Questions,Red Flags,Strengths">Interview</button>
+              <button class="btn btn-xs btn-ghost" data-preset="Bugs,Design Decisions,TODOs,Questions">Pair Programming</button>
+              <button class="btn btn-xs btn-ghost" data-preset="Key Concepts,Examples,Questions,References">Lecture</button>
+            </div>
+
+            <label class="form-control w-full">
+              <div class="label"><span class="label-text text-xs">Analysis Interval (seconds)</span></div>
+              <input type="number" id="analysis-interval" class="input input-bordered input-sm w-full" min="5" max="120" step="5" value="15" />
+            </label>
+
+            <label class="label cursor-pointer gap-2 justify-start">
+              <input type="checkbox" id="multi-agent" class="checkbox checkbox-sm" checked />
+              <span class="label-text text-xs">Multi-agent (parallel analysis per category)</span>
+            </label>
+          </div>
+        </section>
+
       </div>
 
       <div class="modal-action">

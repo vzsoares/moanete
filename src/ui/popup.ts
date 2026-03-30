@@ -44,35 +44,59 @@ interface DynamicField {
   label: string;
   key: keyof Config;
   type?: string;
+  placeholder?: string;
 }
 
-const KEY_FIELDS: Record<string, DynamicField> = {
-  openai: { label: "OpenAI API Key", key: "openaiApiKey", type: "password" },
-  anthropic: { label: "Anthropic API Key", key: "anthropicApiKey", type: "password" },
-  deepgram: { label: "Deepgram API Key", key: "deepgramApiKey", type: "password" },
-  whisperHost: { label: "Whisper Server URL", key: "whisperHost" },
-  whisperModel: { label: "Whisper Model", key: "whisperModel" },
+const STT_FIELDS: Record<string, DynamicField[]> = {
+  whisper: [
+    { label: "Whisper Server URL", key: "whisperHost", placeholder: "/whisper" },
+    { label: "Whisper Model", key: "whisperModel", placeholder: "base" },
+  ],
+  deepgram: [
+    { label: "Deepgram API Key", key: "deepgramApiKey", type: "password", placeholder: "dg_..." },
+  ],
 };
 
-function renderKeyFields(sttProvider: string, llmProvider: string, config: Config): void {
-  const container = $<HTMLDivElement>("#key-fields");
+const LLM_FIELDS: Record<string, DynamicField[]> = {
+  ollama: [
+    { label: "Ollama Host", key: "ollamaHost", placeholder: "http://localhost:11434" },
+    { label: "Model", key: "ollamaModel", placeholder: "llama3.2" },
+  ],
+  openai: [
+    { label: "API Key", key: "openaiApiKey", type: "password", placeholder: "sk-..." },
+    { label: "Model", key: "openaiModel", placeholder: "gpt-4o-mini" },
+  ],
+  anthropic: [
+    { label: "API Key", key: "anthropicApiKey", type: "password", placeholder: "sk-ant-..." },
+    { label: "Model", key: "anthropicModel", placeholder: "claude-sonnet-4-20250514" },
+    { label: "Base URL", key: "anthropicBaseUrl", placeholder: "/api/anthropic" },
+  ],
+};
+
+function renderProviderFields(
+  containerId: string,
+  provider: string,
+  fieldMap: Record<string, DynamicField[]>,
+  config: Config,
+): void {
+  const container = $<HTMLDivElement>(containerId);
   container.innerHTML = "";
 
-  const needed: string[] = [];
-  if (sttProvider === "deepgram") needed.push("deepgram");
-  if (sttProvider === "whisper") needed.push("whisperHost", "whisperModel");
-  if (llmProvider === "openai") needed.push("openai");
-  if (llmProvider === "anthropic") needed.push("anthropic");
+  const fields = fieldMap[provider];
+  if (!fields) return;
 
-  for (const id of needed) {
-    const field = KEY_FIELDS[id];
-    if (!field) continue;
+  for (const field of fields) {
     const inputType = field.type || "text";
+    const value = String(config[field.key] || "");
     const el = document.createElement("label");
     el.className = "form-control w-full";
-    el.innerHTML = `<div class="label"><span class="label-text text-xs">${field.label}</span></div><input type="${inputType}" class="input input-bordered input-sm w-full" data-key="${field.key}" value="${config[field.key] || ""}" />`;
+    el.innerHTML = `<div class="label"><span class="label-text text-xs">${field.label}</span></div><input type="${inputType}" class="input input-bordered input-sm w-full" data-key="${field.key}" placeholder="${field.placeholder || ""}" value="${escapeAttr(value)}" />`;
     container.appendChild(el);
   }
+}
+
+function escapeAttr(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 }
 
 function loadSettings(): void {
@@ -81,24 +105,31 @@ function loadSettings(): void {
   $<HTMLSelectElement>("#stt-language").value = cfg.sttLanguage;
   $<HTMLSelectElement>("#llm-provider").value = cfg.llmProvider;
   $<HTMLInputElement>("#insight-tabs").value = cfg.insightTabs;
+  $<HTMLInputElement>("#analysis-interval").value = String(cfg.analysisIntervalMs / 1000);
   $<HTMLInputElement>("#capture-mic").checked = cfg.captureMic;
   $<HTMLInputElement>("#capture-tab").checked = cfg.captureTab;
   $<HTMLInputElement>("#multi-agent").checked = cfg.multiAgent;
-  renderKeyFields(cfg.sttProvider, cfg.llmProvider, cfg);
+  renderProviderFields("#stt-fields", cfg.sttProvider, STT_FIELDS, cfg);
+  renderProviderFields("#llm-fields", cfg.llmProvider, LLM_FIELDS, cfg);
 }
 
 function saveSettings(): void {
+  const intervalSec = Number($<HTMLInputElement>("#analysis-interval").value) || 15;
+
   const partial: Record<string, unknown> = {
     sttProvider: $<HTMLSelectElement>("#stt-provider").value,
     sttLanguage: $<HTMLSelectElement>("#stt-language").value,
     llmProvider: $<HTMLSelectElement>("#llm-provider").value,
     insightTabs: $<HTMLInputElement>("#insight-tabs").value,
+    analysisIntervalMs: intervalSec * 1000,
     captureMic: $<HTMLInputElement>("#capture-mic").checked,
     captureTab: $<HTMLInputElement>("#capture-tab").checked,
     multiAgent: $<HTMLInputElement>("#multi-agent").checked,
   };
 
-  for (const input of document.querySelectorAll<HTMLInputElement>("#key-fields input")) {
+  for (const input of document.querySelectorAll<HTMLInputElement>(
+    "#stt-fields input, #llm-fields input",
+  )) {
     if (input.dataset.key) {
       partial[input.dataset.key] = input.value;
     }
@@ -869,16 +900,18 @@ document.addEventListener("DOMContentLoaded", () => {
   rebuildDashboardInsightTabs(categories);
 
   $<HTMLSelectElement>("#stt-provider").addEventListener("change", () => {
-    renderKeyFields(
+    renderProviderFields(
+      "#stt-fields",
       $<HTMLSelectElement>("#stt-provider").value,
-      $<HTMLSelectElement>("#llm-provider").value,
+      STT_FIELDS,
       cfg,
     );
   });
   $<HTMLSelectElement>("#llm-provider").addEventListener("change", () => {
-    renderKeyFields(
-      $<HTMLSelectElement>("#stt-provider").value,
+    renderProviderFields(
+      "#llm-fields",
       $<HTMLSelectElement>("#llm-provider").value,
+      LLM_FIELDS,
       cfg,
     );
   });
