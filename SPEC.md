@@ -6,7 +6,7 @@ A browser-based meeting assistant delivered as a plain web app (Vite SPA) with a
 Picture-in-Picture floating overlay. Pluggable STT and LLM providers with a
 BYOK (Bring Your Own Key) free tier and a hosted paid tier.
 
-Uses Vite + Bun + Biome + Tailwind CSS + DaisyUI.
+Uses Vite + Bun + Biome + Tailwind CSS + DaisyUI + tw-animate-css.
 
 ---
 
@@ -35,9 +35,8 @@ Uses Vite + Bun + Biome + Tailwind CSS + DaisyUI.
     │       ├── openai.ts          # Paid: OpenAI
     │       └── anthropic.ts       # Paid: Anthropic (needs CORS proxy)
     └── ui/
-        ├── popup.css              # Main app styles (Tailwind + DaisyUI)
+        ├── global.css             # Tailwind + DaisyUI + tw-animate-css (shared by app + PiP)
         ├── popup.ts               # Settings, session control, PiP launch
-        ├── pip.css                # PiP overlay styles (standalone, inlined)
         └── pip.ts                 # Floating overlay: transcript, insights, chat
 ```
 
@@ -193,7 +192,37 @@ index.html (settings + start)
 
 ---
 
-## 10. Acceptance criteria
+## 10. Browser compatibility
+
+### getDisplayMedia audio (system/tab audio capture)
+
+| OS | Chrome/Edge | Firefox |
+|---|---|---|
+| Windows | System audio (user must check "Share system audio") | No audio support |
+| Linux | PipeWire required; tab audio works | PipeWire required; best option for system audio |
+| macOS | Tab audio only (OS blocks system audio) | No audio support |
+
+### SpeechRecognition
+
+| Browser | Support |
+|---|---|
+| Chrome/Edge | Full (`webkitSpeechRecognition`, requires online) |
+| Firefox | Behind flag (`media.webspeech.recognition.enable`) |
+| Safari | Partial (continuous mode unreliable) |
+
+### Document Picture-in-Picture
+
+| Browser | Support |
+|---|---|
+| Chrome/Edge 116+ | Full |
+| Firefox | Not implemented |
+| Safari | Not implemented |
+
+The app shows browser-specific hints at startup when limitations are detected.
+
+---
+
+## 11. Acceptance criteria
 
 - [ ] Web app loads and main UI renders
 - [ ] Browser SpeechRecognition captures mic and produces transcript

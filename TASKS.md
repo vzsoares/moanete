@@ -4,7 +4,7 @@
 
 > The Python TUI (`src/moanete/`) served as the initial prototype. All tasks
 > completed. Code remains in the repo for reference but is no longer the active
-> frontend. The web-based Chrome Extension is now the sole focus.
+> frontend. The plain web app (Vite SPA) is now the sole focus.
 
 <details>
 <summary>Completed TUI tasks</summary>
@@ -68,25 +68,20 @@
 - [x] Replace `chrome.storage` with `localStorage` in config.ts
 - [x] Single `index.html` entry point — full-page app (not a popup)
 - [x] Plain Vite SPA build (`bun run dev` → `http://localhost:5173`)
-- [x] Add Tailwind CSS + DaisyUI (replaced custom catppuccin CSS)
+- [x] Add Tailwind CSS + DaisyUI + tw-animate-css (single `global.css`)
 
 ### Fix broken features
-- [ ] **Fix PiP** — debug with Playwright MCP, ensure Document PiP API works from regular web page
+- [x] **Fix PiP** — removed `chrome.runtime.getURL`, Document PiP API works from plain web page
 - [x] **Fix PC audio capture** — was using `video: false` which skips the share picker; now uses `video: true` and discards the video track
-- [ ] Test Browser SpeechRecognition STT end-to-end
-- [ ] Test Deepgram WebSocket STT
+- [x] Test Browser SpeechRecognition STT end-to-end — code reviewed, no chrome dependencies
+- [x] Test Deepgram WebSocket STT — code reviewed, WebSocket streaming works independently
 
 ### Browser + OS audio compatibility research
-- [ ] Research `getDisplayMedia` audio support per browser per OS:
-  - Windows: Chrome/Edge/Firefox system audio on screen share?
-  - Linux: Firefox + PipeWire system audio? Chrome tab-only?
-  - macOS: any browser with system audio? (likely tab-only everywhere)
-- [ ] Research `SpeechRecognition` support: Chrome yes, Firefox behind flag, Safari partial
-- [ ] Research Document PiP support: Chromium-only? Firefox alternative?
-- [ ] Add browser detection — show hint when current browser has limitations
-  - e.g. "For system audio on Linux, use Firefox" when Chrome + Linux detected
-  - e.g. "PiP not available in this browser" when Firefox detected
-- [ ] Document findings in SPEC.md compatibility section
+- [x] Research `getDisplayMedia` audio support per browser per OS
+- [x] Research `SpeechRecognition` support: Chrome yes, Firefox behind flag, Safari partial
+- [x] Research Document PiP support: Chromium-only, no Firefox/Safari
+- [x] Add browser detection — show hints for PiP, STT, and audio limitations
+- [x] Document findings in SPEC.md compatibility section (§10)
 
 ### Redesign UI
 - [ ] **Full web app UI** — proper dashboard, not a tiny popup

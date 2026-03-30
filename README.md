@@ -92,7 +92,7 @@ bun run fix           # biome auto-fix
 - **Bundler**: Vite
 - **Runtime / Package manager**: Bun
 - **Linter / Formatter**: Biome
-- **CSS**: Tailwind CSS + DaisyUI
+- **CSS**: Tailwind CSS + DaisyUI + tw-animate-css
 
 ### Project structure
 
@@ -111,8 +111,9 @@ bun run fix           # biome auto-fix
     │   ├── stt/                   # STT: browser (free), deepgram
     │   └── llm/                   # LLM: ollama, openai, anthropic
     └── ui/
-        ├── popup.{ts,css}         # Main app UI (Tailwind + DaisyUI)
-        └── pip.{ts,css}           # PiP floating overlay
+        ├── global.css             # Tailwind + DaisyUI + tw-animate-css (shared by app + PiP)
+        ├── popup.ts               # Main app UI
+        └── pip.ts                 # PiP floating overlay
 ```
 
 ## Requirements

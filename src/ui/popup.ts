@@ -209,10 +209,47 @@ function buildQAContext(): string {
   return parts.join("\n");
 }
 
+// --- Browser compatibility hints ---
+
+function detectCompatHints(): void {
+  const hints: string[] = [];
+  const ua = navigator.userAgent;
+  const isFirefox = ua.includes("Firefox");
+  const isChromium = !!((window as unknown as Record<string, unknown>).chrome);
+  const isMac = ua.includes("Macintosh");
+  const isLinux = ua.includes("Linux");
+
+  if (!("documentPictureInPicture" in window)) {
+    hints.push("PiP overlay not available in this browser (requires Chrome/Edge 116+)");
+  }
+
+  if (!(window.SpeechRecognition || window.webkitSpeechRecognition)) {
+    hints.push("Speech recognition not available — use Chrome/Edge, or enable flag in Firefox");
+  }
+
+  if (isMac) {
+    hints.push("System audio capture unavailable on macOS — tab audio only via Chrome");
+  } else if (isLinux && isChromium) {
+    hints.push("For system audio on Linux, PipeWire is required — Firefox may work better");
+  } else if (isFirefox && !isLinux) {
+    hints.push("Firefox does not support system audio capture on this OS");
+  }
+
+  const container = $<HTMLDivElement>("#compat-hints");
+  for (const hint of hints) {
+    const el = document.createElement("div");
+    el.className = "alert alert-warning alert-sm py-1 px-3";
+    el.innerHTML = `<span>${hint}</span><button class="btn btn-ghost btn-xs btn-circle">✕</button>`;
+    el.querySelector("button")!.addEventListener("click", () => el.remove());
+    container.appendChild(el);
+  }
+}
+
 // --- Event listeners ---
 
 document.addEventListener("DOMContentLoaded", async () => {
-  await loadSettings();
+  loadSettings();
+  detectCompatHints();
 
   const cfg = await loadConfig();
   $<HTMLSelectElement>("#stt-provider").addEventListener("change", () => {
