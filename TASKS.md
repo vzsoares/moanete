@@ -134,8 +134,13 @@
 - [x] Resources: `moanete://transcript`, `moanete://insights`, `moanete://status`
 - [x] `just mcp` command to start the server
 
-### MCP client (future)
-- [ ] Allow moanete to connect to external MCP servers for extended context
+### MCP client (done)
+- [x] Allow moanete to connect to external MCP servers for extended context
+- [x] MCP client manager (`src/mcp/client.ts`) — connects to external servers via stdio transport
+- [x] Bidirectional WebSocket bridge — browser can query external MCP tools/resources
+- [x] Server-side proxy tools: `list_external_servers`, `list_external_tools`, `call_external_tool`
+- [x] Browser UI: MCP Servers modal with server list, tool browsing, and tool calling
+- [x] Config via `mcp-servers.json` (includes Notion MCP example)
 - [ ] Example: connect to a calendar MCP to show meeting agenda alongside insights
 - [ ] Example: connect to a notes MCP to auto-save action items
 
@@ -143,9 +148,11 @@
 
 ## Phase 5: AI Enhancements
 
-### Structured output
-- [ ] Use OpenAI/Anthropic structured output for insight extraction
-- [ ] More reliable than hoping the LLM outputs valid JSON
+### Structured output (done)
+- [x] Ollama: `format: "json"` forces JSON mode
+- [x] OpenAI: `response_format: { type: "json_object" }`
+- [x] Anthropic: assistant prefill with `{` to nudge JSON
+- [x] Added `json?: boolean` to `ChatOptions`, analyzer passes `json: true`
 
 ### Multi-agent
 - [ ] Separate analyzer into specialized agents (one per insight type)
@@ -156,7 +163,7 @@
 
 ## Phase 6: Testing & CI
 
-- [ ] Add GitHub Actions workflow for Biome check
+- [x] Add GitHub Actions workflow for Biome check
 - [ ] Add integration test with mock audio stream
 - [ ] Add test for provider abstraction with mock API responses
 - [ ] Test web app in CI (playwright)

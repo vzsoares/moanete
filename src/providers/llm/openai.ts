@@ -18,11 +18,12 @@ function createOpenAILLM(): LLMProvider {
     async chat(messages, opts = {}) {
       if (!apiKey) throw new Error("OpenAI API key not configured");
 
-      const body = {
+      const body: Record<string, unknown> = {
         model,
         messages: opts.system ? [{ role: "system", content: opts.system }, ...messages] : messages,
         max_tokens: opts.maxTokens || 1024,
       };
+      if (opts.json) body.response_format = { type: "json_object" };
 
       const res = await fetch(`${baseUrl}/chat/completions`, {
         method: "POST",

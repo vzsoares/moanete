@@ -14,12 +14,13 @@ function createOllamaLLM(): LLMProvider {
     },
 
     async chat(messages, opts = {}) {
-      const payload = {
+      const payload: Record<string, unknown> = {
         model,
         messages: opts.system ? [{ role: "system", content: opts.system }, ...messages] : messages,
         stream: false,
         options: { num_predict: opts.maxTokens || 1024 },
       };
+      if (opts.json) payload.format = "json";
 
       const res = await fetch(`${host}/api/chat`, {
         method: "POST",

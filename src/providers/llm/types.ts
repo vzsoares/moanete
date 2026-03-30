@@ -6,6 +6,7 @@ export interface ChatMessage {
 export interface ChatOptions {
   system?: string;
   maxTokens?: number;
+  json?: boolean;
 }
 
 export interface LLMProvider {

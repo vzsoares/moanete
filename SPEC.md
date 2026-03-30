@@ -17,17 +17,22 @@ Uses Vite + Bun + Biome + Tailwind CSS + DaisyUI + tw-animate-css.
 ├── justfile                       # Task runner (just dev, just whisper, etc.)
 ├── package.json                   # Bun + Vite + Biome
 ├── biome.json                     # Linter/formatter config
+├── mcp-servers.json               # External MCP server config (Notion, etc.)
+├── .github/workflows/ci.yml      # GitHub Actions CI (lint + typecheck + build)
 ├── scripts/
 │   └── whisper-server.py          # Local Whisper STT server (uv run)
 └── src/
     ├── mcp/
     │   ├── server.ts              # MCP stdio server (tools + resources)
-    │   └── bridge.ts              # WebSocket bridge (browser → MCP)
+    │   ├── client.ts              # MCP client manager (connects to external servers)
+    │   └── bridge.ts              # Bidirectional WebSocket bridge
     ├── core/
     │   ├── analyzer.ts            # Real-time insight extraction (setInterval)
     │   ├── audio.ts               # Separate mic/tab audio capture streams
     │   ├── config.ts              # localStorage persistence
+    │   ├── mcp-bridge.ts          # Browser-side WebSocket client (state push + MCP queries)
     │   ├── session.ts             # Orchestrator (audio → STT → analyzer → UI)
+    │   ├── storage.ts             # IndexedDB session persistence
     │   └── summarizer.ts          # On-demand summarization + Q&A
     ├── providers/
     │   ├── index.ts               # Registry barrel
@@ -241,3 +246,34 @@ The app shows browser-specific hints at startup when limitations are detected.
 - [ ] Deepgram streaming STT works when API key provided
 - [ ] OpenAI and Anthropic LLM providers work
 - [ ] Free tier runs with zero backend (all API calls from browser)
+
+---
+
+## 12. MCP Integration
+
+### MCP Server (outbound)
+
+moanete exposes a stdio MCP server for AI assistants (e.g. Claude Code):
+
+**Tools:** `get_transcript`, `get_insights`, `get_summary`, `ask_question`
+**Resources:** `moanete://transcript`, `moanete://insights`, `moanete://status`
+
+### MCP Client (inbound)
+
+moanete can connect to external MCP servers for extended context (e.g. Notion, calendar).
+
+**Architecture:**
+- `src/mcp/client.ts` — connects to external servers via stdio transport
+- Config in `mcp-servers.json` (same format as Claude Code's server config)
+- Bridge is bidirectional: browser queries external MCP tools/resources via WebSocket
+- External tools also exposed through moanete's own MCP server (`list_external_servers`, `list_external_tools`, `call_external_tool`)
+
+**Browser UI:** MCP Servers modal — lists connected servers, browses tools, runs tools with JSON arguments.
+
+---
+
+## 13. CI/CD
+
+GitHub Actions workflow (`.github/workflows/ci.yml`):
+- Runs on push to `main` and pull requests
+- Steps: `bun install` → `bun run check` → `bun run typecheck` → `bun run build`

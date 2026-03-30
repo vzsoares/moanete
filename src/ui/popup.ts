@@ -2,6 +2,12 @@ import { toKey } from "../core/analyzer.ts";
 import { type Config, loadConfig, saveConfig } from "../core/config.ts";
 import {
   connectBridge,
+  isBridgeConnected,
+  mcpCallTool,
+  mcpConnect,
+  mcpDisconnect,
+  mcpListServers,
+  mcpListTools,
   pushInsights,
   pushStatus,
   pushSummary,
@@ -604,6 +610,243 @@ function formatDur(ms: number): string {
   return `${s}s`;
 }
 
+// --- MCP Servers UI ---
+
+interface McpPreset {
+  name: string;
+  command: string;
+  args: string;
+  tokenLabel: string;
+  buildEnv: (token: string) => Record<string, string>;
+}
+
+const MCP_PRESETS: Record<string, McpPreset> = {
+  notion: {
+    name: "notion",
+    command: "npx",
+    args: "-y @notionhq/notion-mcp-server",
+    tokenLabel: "Notion Integration Token",
+    buildEnv: (token) => ({
+      OPENAPI_MCP_HEADERS: JSON.stringify({
+        Authorization: `Bearer ${token}`,
+        "Notion-Version": "2022-06-28",
+      }),
+    }),
+  },
+};
+
+function showConnectForm(preset?: McpPreset): void {
+  const form = $<HTMLDivElement>("#mcp-connect-form");
+  const title = $<HTMLElement>("#mcp-form-title");
+  const tokenField = $<HTMLElement>("#mcp-token-field");
+  const tokenLabel = $<HTMLElement>("#mcp-token-label");
+
+  form.classList.remove("hidden");
+
+  if (preset) {
+    title.textContent = `Connect to ${preset.name}`;
+    $<HTMLInputElement>("#mcp-name").value = preset.name;
+    $<HTMLInputElement>("#mcp-command").value = preset.command;
+    $<HTMLInputElement>("#mcp-args").value = preset.args;
+    tokenField.classList.remove("hidden");
+    tokenLabel.textContent = preset.tokenLabel;
+    $<HTMLInputElement>("#mcp-token").value = "";
+    form.dataset.preset = preset.name;
+  } else {
+    title.textContent = "Connect Custom Server";
+    $<HTMLInputElement>("#mcp-name").value = "";
+    $<HTMLInputElement>("#mcp-command").value = "";
+    $<HTMLInputElement>("#mcp-args").value = "";
+    tokenField.classList.add("hidden");
+    delete form.dataset.preset;
+  }
+
+  $<HTMLDivElement>("#mcp-connect-status").classList.add("hidden");
+}
+
+function hideConnectForm(): void {
+  $<HTMLDivElement>("#mcp-connect-form").classList.add("hidden");
+}
+
+async function handleMcpConnect(): Promise<void> {
+  const form = $<HTMLDivElement>("#mcp-connect-form");
+  const status = $<HTMLDivElement>("#mcp-connect-status");
+  const name = $<HTMLInputElement>("#mcp-name").value.trim();
+  const command = $<HTMLInputElement>("#mcp-command").value.trim();
+  const argsStr = $<HTMLInputElement>("#mcp-args").value.trim();
+  const token = $<HTMLInputElement>("#mcp-token").value.trim();
+
+  if (!name || !command) {
+    status.textContent = "Name and command are required.";
+    status.className = "text-xs mt-1 text-error";
+    status.classList.remove("hidden");
+    return;
+  }
+
+  const args = argsStr ? argsStr.split(/\s+/) : undefined;
+  let env: Record<string, string> | undefined;
+
+  const presetKey = form.dataset.preset;
+  if (presetKey && MCP_PRESETS[presetKey] && token) {
+    env = MCP_PRESETS[presetKey].buildEnv(token);
+  }
+
+  status.textContent = "Connecting...";
+  status.className = "text-xs mt-1 text-base-content/60";
+  status.classList.remove("hidden");
+
+  try {
+    await mcpConnect({ name, command, args, env });
+    status.textContent = `Connected to "${name}"!`;
+    status.className = "text-xs mt-1 text-success";
+    hideConnectForm();
+    renderMcpServers();
+  } catch (err) {
+    status.textContent = `Failed: ${err instanceof Error ? err.message : String(err)}`;
+    status.className = "text-xs mt-1 text-error";
+  }
+}
+
+async function renderMcpServers(): Promise<void> {
+  const list = $<HTMLDivElement>("#mcp-servers-list");
+  const toolsSection = $<HTMLDivElement>("#mcp-tools-section");
+  const toolResult = $<HTMLDivElement>("#mcp-tool-result");
+
+  toolsSection.classList.add("hidden");
+  toolResult.classList.add("hidden");
+
+  if (!isBridgeConnected()) {
+    list.innerHTML =
+      '<p class="text-sm text-error">MCP bridge not connected. Start it with <code class="badge badge-sm badge-ghost">just mcp</code></p>';
+    return;
+  }
+
+  list.innerHTML = '<p class="text-sm text-base-content/40">Loading...</p>';
+
+  try {
+    const servers = await mcpListServers();
+
+    if (servers.length === 0) {
+      list.innerHTML =
+        '<p class="text-sm text-base-content/40 italic">No servers connected. Use Quick Connect above to add one.</p>';
+      return;
+    }
+
+    list.innerHTML = "";
+    for (const name of servers) {
+      const card = document.createElement("div");
+      card.className =
+        "bg-base-200 rounded-lg p-3 flex items-center justify-between border border-base-content/5";
+      card.innerHTML = `
+        <div class="flex items-center gap-2">
+          <span class="dot on"></span>
+          <span class="text-sm font-semibold">${escapeHtml(name)}</span>
+        </div>
+        <div class="flex gap-1">
+          <button class="btn btn-xs btn-primary mcp-show-tools" data-server="${escapeHtml(name)}">Tools</button>
+          <button class="btn btn-xs btn-ghost text-error mcp-disconnect" data-server="${escapeHtml(name)}">Disconnect</button>
+        </div>
+      `;
+      list.appendChild(card);
+    }
+
+    for (const btn of list.querySelectorAll<HTMLButtonElement>(".mcp-show-tools")) {
+      btn.addEventListener("click", () => renderMcpTools(btn.dataset.server!));
+    }
+
+    for (const btn of list.querySelectorAll<HTMLButtonElement>(".mcp-disconnect")) {
+      btn.addEventListener("click", async () => {
+        await mcpDisconnect(btn.dataset.server!);
+        renderMcpServers();
+      });
+    }
+  } catch (err) {
+    list.innerHTML = `<p class="text-sm text-error">${escapeHtml(err instanceof Error ? err.message : String(err))}</p>`;
+  }
+}
+
+async function renderMcpTools(serverName: string): Promise<void> {
+  const toolsSection = $<HTMLDivElement>("#mcp-tools-section");
+  const toolsList = $<HTMLDivElement>("#mcp-tools-list");
+  const toolResult = $<HTMLDivElement>("#mcp-tool-result");
+
+  toolResult.classList.add("hidden");
+  toolsSection.classList.remove("hidden");
+  toolsList.innerHTML = '<p class="text-sm text-base-content/40">Loading tools...</p>';
+
+  try {
+    const allTools = await mcpListTools(serverName);
+    const tools = allTools[serverName] ?? [];
+
+    if (tools.length === 0) {
+      toolsList.innerHTML =
+        '<p class="text-sm text-base-content/40 italic">No tools available.</p>';
+      return;
+    }
+
+    toolsList.innerHTML = "";
+    for (const tool of tools) {
+      const card = document.createElement("div");
+      card.className = "bg-base-200 rounded-lg p-3 border border-base-content/5";
+      card.innerHTML = `
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-semibold text-primary">${escapeHtml(tool.name)}</span>
+          <button class="btn btn-xs btn-ghost mcp-call-tool" data-server="${escapeHtml(serverName)}" data-tool="${escapeHtml(tool.name)}">Run</button>
+        </div>
+        <p class="text-xs text-base-content/60">${escapeHtml(tool.description ?? "No description")}</p>
+        ${
+          tool.inputSchema
+            ? `<details class="mt-1"><summary class="text-xs cursor-pointer text-base-content/40">Schema</summary><pre class="text-xs mt-1 bg-base-300 rounded p-2 overflow-auto max-h-32">${escapeHtml(JSON.stringify(tool.inputSchema, null, 2))}</pre></details>`
+            : ""
+        }
+      `;
+      toolsList.appendChild(card);
+    }
+
+    for (const btn of toolsList.querySelectorAll<HTMLButtonElement>(".mcp-call-tool")) {
+      btn.addEventListener("click", () => {
+        const argsStr = prompt("Arguments (JSON):", "{}");
+        if (argsStr === null) return;
+        callMcpTool(btn.dataset.server!, btn.dataset.tool!, argsStr);
+      });
+    }
+  } catch (err) {
+    toolsList.innerHTML = `<p class="text-sm text-error">${escapeHtml(err instanceof Error ? err.message : String(err))}</p>`;
+  }
+}
+
+async function callMcpTool(serverName: string, toolName: string, argsJson: string): Promise<void> {
+  const resultDiv = $<HTMLDivElement>("#mcp-tool-result");
+  const pre = resultDiv.querySelector("pre")!;
+
+  resultDiv.classList.remove("hidden");
+  pre.textContent = "Calling...";
+
+  try {
+    const args = JSON.parse(argsJson) as Record<string, unknown>;
+    const result = await mcpCallTool(serverName, toolName, args);
+    pre.textContent = result.content || "(empty response)";
+    if (result.isError) pre.classList.add("text-error");
+    else pre.classList.remove("text-error");
+  } catch (err) {
+    pre.textContent = `Error: ${err instanceof Error ? err.message : String(err)}`;
+    pre.classList.add("text-error");
+  }
+}
+
+function setupMcpModal(): void {
+  // Preset buttons
+  for (const btn of document.querySelectorAll<HTMLButtonElement>(".mcp-preset")) {
+    btn.addEventListener("click", () => {
+      const preset = MCP_PRESETS[btn.dataset.preset!];
+      showConnectForm(preset);
+    });
+  }
+
+  $<HTMLButtonElement>("#btn-mcp-connect").addEventListener("click", handleMcpConnect);
+  $<HTMLButtonElement>("#btn-mcp-cancel").addEventListener("click", hideConnectForm);
+}
+
 // --- Event listeners ---
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -671,6 +914,15 @@ document.addEventListener("DOMContentLoaded", () => {
     $<HTMLDivElement>("#history-detail").classList.add("hidden");
     $<HTMLButtonElement>("#btn-history-back").classList.add("hidden");
   });
+
+  // MCP modal
+  setupMcpModal();
+  $<HTMLButtonElement>("#btn-mcp").addEventListener("click", () => {
+    $<HTMLDialogElement>("#mcp-modal").showModal();
+    renderMcpServers();
+  });
+
+  $<HTMLButtonElement>("#btn-mcp-refresh").addEventListener("click", () => renderMcpServers());
 
   $<HTMLButtonElement>("#btn-start").addEventListener("click", () => startSession());
   $<HTMLButtonElement>("#btn-stop").addEventListener("click", stopSession);

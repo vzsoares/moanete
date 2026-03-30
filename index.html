@@ -38,6 +38,10 @@
       <button id="btn-start" class="btn btn-primary btn-sm">Start Session</button>
       <button id="btn-stop" class="btn btn-error btn-sm" hidden>Stop</button>
       <button id="btn-pip" class="btn btn-ghost btn-sm" hidden>PiP</button>
+      <button id="btn-mcp" class="btn btn-ghost btn-sm gap-1">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+        MCP
+      </button>
       <button id="btn-history" class="btn btn-ghost btn-sm gap-1">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         History
@@ -211,6 +215,77 @@
       <div id="history-detail" class="hidden flex-1 overflow-y-auto"></div>
       <div class="modal-action">
         <button id="btn-history-back" class="btn btn-ghost btn-sm hidden">Back</button>
+        <form method="dialog"><button class="btn btn-ghost btn-sm">Close</button></form>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+  </dialog>
+
+  <!-- MCP Servers modal -->
+  <dialog id="mcp-modal" class="modal">
+    <div class="modal-box max-w-2xl max-h-[80vh] flex flex-col">
+      <h3 class="text-lg font-bold mb-2">MCP Servers</h3>
+      <p class="text-xs text-base-content/50 mb-3">
+        Connect to external MCP servers for extended context.
+        Requires the MCP bridge (<code class="badge badge-sm badge-ghost">just mcp</code>).
+      </p>
+
+      <!-- Quick connect presets -->
+      <div class="mb-4">
+        <h4 class="text-xs font-semibold text-base-content/60 mb-2">Quick Connect</h4>
+        <div class="flex flex-wrap gap-2">
+          <button class="btn btn-sm btn-outline mcp-preset" data-preset="notion">Notion</button>
+          <button class="btn btn-sm btn-outline mcp-preset" data-preset="custom">Custom...</button>
+        </div>
+      </div>
+
+      <!-- Connect form (hidden by default) -->
+      <div id="mcp-connect-form" class="hidden mb-4 bg-base-200 rounded-lg p-4">
+        <h4 class="text-sm font-semibold mb-3" id="mcp-form-title">Connect Server</h4>
+        <div class="flex flex-col gap-2">
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text text-xs">Name</span></div>
+            <input type="text" id="mcp-name" class="input input-bordered input-sm w-full" placeholder="notion" />
+          </label>
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text text-xs">Command</span></div>
+            <input type="text" id="mcp-command" class="input input-bordered input-sm w-full" placeholder="npx" />
+          </label>
+          <label class="form-control w-full">
+            <div class="label"><span class="label-text text-xs">Args (space-separated)</span></div>
+            <input type="text" id="mcp-args" class="input input-bordered input-sm w-full" placeholder="-y @notionhq/notion-mcp-server" />
+          </label>
+          <label class="form-control w-full" id="mcp-token-field">
+            <div class="label"><span class="label-text text-xs" id="mcp-token-label">API Token</span></div>
+            <input type="password" id="mcp-token" class="input input-bordered input-sm w-full" placeholder="secret_..." />
+          </label>
+          <div class="flex gap-2 mt-2">
+            <button id="btn-mcp-connect" class="btn btn-primary btn-sm">Connect</button>
+            <button id="btn-mcp-cancel" class="btn btn-ghost btn-sm">Cancel</button>
+          </div>
+          <div id="mcp-connect-status" class="text-xs mt-1 hidden"></div>
+        </div>
+      </div>
+
+      <!-- Connected servers list -->
+      <div id="mcp-servers-list" class="flex flex-col gap-2 mb-4">
+        <p class="text-sm text-base-content/40 italic">Checking connection...</p>
+      </div>
+
+      <!-- Tools section -->
+      <div id="mcp-tools-section" class="hidden flex-1 overflow-y-auto">
+        <h4 class="text-sm font-semibold mb-2">Available Tools</h4>
+        <div id="mcp-tools-list" class="flex flex-col gap-2"></div>
+      </div>
+
+      <!-- Tool result -->
+      <div id="mcp-tool-result" class="hidden mt-3">
+        <h4 class="text-sm font-semibold mb-1">Result</h4>
+        <pre class="bg-base-200 rounded-lg p-3 text-xs overflow-auto max-h-48 whitespace-pre-wrap"></pre>
+      </div>
+
+      <div class="modal-action">
+        <button id="btn-mcp-refresh" class="btn btn-ghost btn-sm">Refresh</button>
         <form method="dialog"><button class="btn btn-ghost btn-sm">Close</button></form>
       </div>
     </div>

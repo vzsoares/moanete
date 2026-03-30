@@ -106,22 +106,25 @@ bun run fix           # biome auto-fix
 ```
 ├── index.html                     # Single-page app entry point
 ├── justfile                       # Task runner (just dev, just whisper, etc.)
-├── package.json                   # Bun + Vite + Biome
-├── biome.json                     # Linter/formatter config
+├── mcp-servers.json               # External MCP server config (Notion, etc.)
+├── .github/workflows/ci.yml      # GitHub Actions CI
 ├── scripts/
 │   └── whisper-server.py          # Local Whisper STT server (uv run)
 └── src/
-    ├── core/                      # Audio capture, analyzer, session, config
+    ├── mcp/                       # MCP server + client + WebSocket bridge
+    ├── core/                      # Audio capture, analyzer, session, config, storage
     ├── providers/
     │   ├── stt/                   # STT: browser (free), whisper (local), deepgram
     │   └── llm/                   # LLM: ollama, openai, anthropic
     └── ui/
         ├── global.css             # Tailwind + DaisyUI + tw-animate-css
-        ├── popup.ts               # Dashboard UI + settings modal
+        ├── popup.ts               # Dashboard UI + settings + MCP modal
         └── pip.ts                 # Minimal PiP floating overlay
 ```
 
 ## MCP Integration
+
+### MCP Server
 
 moanete exposes a Model Context Protocol (MCP) server so AI assistants like Claude Code can query the live meeting:
 
@@ -144,6 +147,27 @@ Add to your Claude Code config (`.claude/settings.json`):
 
 **Tools:** `get_transcript`, `get_insights`, `get_summary`, `ask_question`
 **Resources:** `moanete://transcript`, `moanete://insights`, `moanete://status`
+
+### MCP Client — External Servers
+
+moanete can also connect to external MCP servers (like Notion) for extended context during meetings.
+
+Configure external servers in `mcp-servers.json`:
+```json
+{
+  "mcpServers": {
+    "notion": {
+      "command": "npx",
+      "args": ["-y", "@notionhq/notion-mcp-server"],
+      "env": {
+        "OPENAPI_MCP_HEADERS": "{\"Authorization\": \"Bearer YOUR_NOTION_TOKEN\", \"Notion-Version\": \"2022-06-28\"}"
+      }
+    }
+  }
+}
+```
+
+Start the MCP server (`just mcp`), then click the **MCP** button in the navbar to browse connected servers and call their tools from the app.
 
 ## Requirements
 

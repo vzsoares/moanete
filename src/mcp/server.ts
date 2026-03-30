@@ -11,6 +11,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { type TranscriptLine, getState, startBridge } from "./bridge.ts";
+import * as mcpClient from "./client.ts";
 
 function formatTranscript(lines: TranscriptLine[]): string {
   return lines.map((l) => `${l.source === "mic" ? "You" : "Them"}: ${l.text}`).join("\n");
@@ -107,10 +108,59 @@ server.resource("status", "moanete://status", { description: "Session status" },
   return { contents: [{ uri: "moanete://status", text: JSON.stringify(info, null, 2) }] };
 });
 
+// --- External MCP proxy tools ---
+
+server.tool("list_external_servers", "List connected external MCP servers", {}, () => {
+  const names = mcpClient.listConnected();
+  const text = names.length
+    ? `Connected MCP servers: ${names.join(", ")}`
+    : "No external MCP servers connected. Configure them in mcp-servers.json.";
+  return { content: [{ type: "text" as const, text }] };
+});
+
+server.tool(
+  "list_external_tools",
+  "List tools available from an external MCP server",
+  { server: z.string().describe("Name of the external MCP server") },
+  async ({ server: serverName }) => {
+    const tools = await mcpClient.listTools(serverName);
+    const items = tools[serverName] ?? [];
+    const text = items.length
+      ? items.map((t) => `- **${t.name}**: ${t.description ?? "(no description)"}`).join("\n")
+      : `No tools found on "${serverName}".`;
+    return { content: [{ type: "text" as const, text }] };
+  },
+);
+
+server.tool(
+  "call_external_tool",
+  "Call a tool on an external MCP server",
+  {
+    server: z.string().describe("Name of the external MCP server"),
+    tool: z.string().describe("Name of the tool to call"),
+    args: z.string().optional().describe("JSON-encoded arguments for the tool"),
+  },
+  async ({ server: serverName, tool, args }) => {
+    const parsed = args ? (JSON.parse(args) as Record<string, unknown>) : {};
+    const result = await mcpClient.callTool(serverName, tool, parsed);
+    return {
+      content: [{ type: "text" as const, text: result.content || "(empty response)" }],
+      isError: result.isError,
+    };
+  },
+);
+
 // --- Start ---
 
 async function main() {
   startBridge();
+
+  // Connect to external MCP servers
+  const connected = await mcpClient.connectAll();
+  if (connected.length > 0) {
+    console.error(`[mcp] connected to external servers: ${connected.join(", ")}`);
+  }
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error("[mcp] moanete MCP server running (stdio + ws://localhost:3001)");

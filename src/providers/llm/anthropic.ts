@@ -18,10 +18,12 @@ function createAnthropicLLM(): LLMProvider {
     async chat(messages, opts = {}) {
       if (!apiKey) throw new Error("Anthropic API key not configured");
 
+      // Prefill assistant with "{" to force JSON output
+      const msgs = opts.json ? [...messages, { role: "assistant", content: "{" }] : messages;
       const body: Record<string, unknown> = {
         model,
         max_tokens: opts.maxTokens || 1024,
-        messages,
+        messages: msgs,
       };
       if (opts.system) body.system = opts.system;
 
@@ -40,7 +42,8 @@ function createAnthropicLLM(): LLMProvider {
       }
 
       const data = await res.json();
-      return data.content[0].text;
+      const text = data.content[0].text;
+      return opts.json ? `{${text}` : text;
     },
   };
 }

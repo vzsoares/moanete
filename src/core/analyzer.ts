@@ -135,6 +135,7 @@ export class Analyzer {
       const raw = await this._llm.chat(messages, {
         system: this._systemPrompt,
         maxTokens: 512,
+        json: true,
       });
       this._lastError = null;
 
