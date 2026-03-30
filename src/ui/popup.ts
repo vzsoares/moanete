@@ -1,7 +1,15 @@
 import { loadConfig, saveConfig, type Config } from "../core/config.ts";
 import { Session } from "../core/session.ts";
 import { answerQuestion, summarizeTranscript } from "../core/summarizer.ts";
-import type { ChatMessage } from "../providers/llm/types.ts";
+import {
+  buildPipUI,
+  destroyPipUI,
+  pipAppendTranscript,
+  updateInsights as pipUpdateInsights,
+  seedPipState,
+  setChatReply,
+  setSummary,
+} from "./pip.ts";
 
 const $ = <T extends HTMLElement>(sel: string): T =>
   document.querySelector<T>(sel)!;
@@ -76,11 +84,11 @@ async function startSession(): Promise<void> {
 
   session.onTranscript = (text) => {
     appendTranscript(text);
-    pipWindow?.postMessage({ type: "transcript", text }, "*");
+    pipAppendTranscript(text);
   };
 
   session.onInsights = (insights) => {
-    pipWindow?.postMessage({ type: "insights", insights }, "*");
+    pipUpdateInsights(insights);
   };
 
   session.onError = (msg) => {
@@ -135,78 +143,55 @@ async function openPiP(): Promise<void> {
   }
 
   pipWindow = await (
-    window as unknown as { documentPictureInPicture: { requestWindow(opts: { width: number; height: number }): Promise<Window> } }
+    window as unknown as {
+      documentPictureInPicture: {
+        requestWindow(opts: { width: number; height: number }): Promise<Window>;
+      };
+    }
   ).documentPictureInPicture.requestWindow({
     width: 400,
     height: 500,
   });
 
-  const link = pipWindow.document.createElement("link");
-  link.rel = "stylesheet";
-  link.href = chrome.runtime.getURL("pip.css");
-  pipWindow.document.head.appendChild(link);
+  // Build the PiP UI directly from popup context — no script injection
+  buildPipUI(pipWindow.document, chrome.runtime.getURL("pip.css"), {
+    onChat: handlePipChat,
+    onSummarize: handlePipSummarize,
+  });
 
-  const script = pipWindow.document.createElement("script");
-  script.type = "module";
-  script.src = chrome.runtime.getURL("src/ui/pip.js");
-  pipWindow.document.head.appendChild(script);
-
+  // Seed with current state
   if (session?.analyzer) {
-    pipWindow.addEventListener("load", () => {
-      pipWindow!.postMessage(
-        {
-          type: "init",
-          categories: session!.analyzer!.categories,
-          insights: session!.analyzer!.insights,
-          transcript: session!.analyzer!.transcript,
-        },
-        "*",
-      );
-    });
+    seedPipState(
+      session.analyzer.categories,
+      session.analyzer.insights,
+      session.analyzer.transcript,
+    );
   }
 
-  window.addEventListener("message", handlePipMessage);
   pipWindow.addEventListener("pagehide", () => {
+    destroyPipUI();
     pipWindow = null;
   });
 }
 
-async function handlePipMessage(event: MessageEvent): Promise<void> {
+async function handlePipChat(question: string, history: import("../providers/llm/types.ts").ChatMessage[]): Promise<void> {
   if (!session?.llm || !session.analyzer) return;
-  const { type, payload } = event.data;
-
-  if (type === "chat") {
-    try {
-      const context = buildQAContext();
-      const result = await answerQuestion(
-        session.llm,
-        payload.question,
-        context,
-        payload.history || [],
-      );
-      pipWindow?.postMessage({ type: "chat-reply", ...result }, "*");
-    } catch (e) {
-      pipWindow?.postMessage(
-        {
-          type: "chat-reply",
-          answer: `Error: ${e instanceof Error ? e.message : String(e)}`,
-          history: [] as ChatMessage[],
-        },
-        "*",
-      );
-    }
+  try {
+    const context = buildQAContext();
+    const result = await answerQuestion(session.llm, question, context, history);
+    setChatReply(result.answer, result.history);
+  } catch (e) {
+    setChatReply(`Error: ${e instanceof Error ? e.message : String(e)}`, []);
   }
+}
 
-  if (type === "summarize") {
-    try {
-      const summary = await summarizeTranscript(session.llm, session.analyzer.transcript);
-      pipWindow?.postMessage({ type: "summary", text: summary }, "*");
-    } catch (e) {
-      pipWindow?.postMessage(
-        { type: "summary", text: `Error: ${e instanceof Error ? e.message : String(e)}` },
-        "*",
-      );
-    }
+async function handlePipSummarize(): Promise<void> {
+  if (!session?.llm || !session.analyzer) return;
+  try {
+    const summary = await summarizeTranscript(session.llm, session.analyzer.transcript);
+    setSummary(summary);
+  } catch (e) {
+    setSummary(`Error: ${e instanceof Error ? e.message : String(e)}`);
   }
 }
 

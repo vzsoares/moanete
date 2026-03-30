@@ -23,7 +23,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["pip.css", "src/ui/pip.js"],
+      "resources": ["pip.css"],
       "matches": ["<all_urls>"]
     }
   ]

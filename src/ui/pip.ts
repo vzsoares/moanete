@@ -1,13 +1,38 @@
+/**
+ * PiP UI — builds and manages the floating overlay DOM.
+ *
+ * All functions operate on the PiP window's document but run in the
+ * popup's JS context. No script injection needed.
+ */
 import type { ChatMessage } from "../providers/llm/types.ts";
+import { toKey } from "../core/analyzer.ts";
+import PIP_CSS from "./pip.css?inline";
 
-let categories: string[] = [];
-let _insightData: Record<string, string[]> = {};
+let doc: Document | null = null;
 let chatHistory: ChatMessage[] = [];
+const transcriptBuffer: string[] = [];
+let onChat: ((question: string, history: ChatMessage[]) => void) | null = null;
+let onSummarize: (() => void) | null = null;
 
-// --- Build DOM ---
+export interface PipCallbacks {
+  onChat: (question: string, history: ChatMessage[]) => void;
+  onSummarize: () => void;
+}
 
-function buildUI(): void {
-  document.body.innerHTML = `
+export function buildPipUI(pipDoc: Document, _cssUrl: string, callbacks: PipCallbacks): void {
+  doc = pipDoc;
+  onChat = callbacks.onChat;
+  onSummarize = callbacks.onSummarize;
+  chatHistory = [];
+  transcriptBuffer.length = 0;
+
+  // Inline CSS — extension URLs can't be fetched from PiP window
+  const style = doc.createElement("style");
+  style.textContent = PIP_CSS;
+  doc.head.appendChild(style);
+
+  // Build DOM
+  doc.body.innerHTML = `
     <header>
       <span class="dot"></span>
       <h1>moanete</h1>
@@ -49,11 +74,20 @@ function buildUI(): void {
   setupSummary();
 }
 
+export function destroyPipUI(): void {
+  doc = null;
+  onChat = null;
+  onSummarize = null;
+}
+
+// --- Tab switching ---
+
 function setupTabSwitching(): void {
-  for (const bar of document.querySelectorAll<HTMLDivElement>(".tab-bar")) {
+  if (!doc) return;
+  for (const bar of doc.querySelectorAll<HTMLDivElement>(".tab-bar")) {
     bar.addEventListener("click", (e) => {
       const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-panel]");
-      if (!btn) return;
+      if (!btn || !doc) return;
 
       const panelsContainer = bar.nextElementSibling as HTMLElement;
       for (const b of bar.querySelectorAll("button")) b.classList.remove("active");
@@ -63,7 +97,7 @@ function setupTabSwitching(): void {
       }
 
       btn.classList.add("active");
-      const panel = document.getElementById(btn.dataset.panel!);
+      const panel = doc.getElementById(btn.dataset.panel!);
       if (panel) {
         panel.classList.add("active");
         panel.style.display = btn.dataset.panel === "chat-panel" ? "flex" : "block";
@@ -72,19 +106,19 @@ function setupTabSwitching(): void {
   }
 }
 
+// --- Chat ---
+
 function setupChat(): void {
-  const input = document.getElementById("chat-input") as HTMLInputElement;
-  const btn = document.getElementById("btn-send") as HTMLButtonElement;
+  if (!doc) return;
+  const input = doc.getElementById("chat-input") as HTMLInputElement;
+  const btn = doc.getElementById("btn-send") as HTMLButtonElement;
 
   const send = () => {
     const q = input.value.trim();
     if (!q) return;
     input.value = "";
     appendChat("user", q);
-    window.opener?.postMessage(
-      { type: "chat", payload: { question: q, history: chatHistory } },
-      "*",
-    );
+    onChat?.(q, chatHistory);
   };
 
   btn.addEventListener("click", send);
@@ -93,49 +127,58 @@ function setupChat(): void {
   });
 }
 
-function setupSummary(): void {
-  document.getElementById("btn-summarize")!.addEventListener("click", () => {
-    const el = document.getElementById("summary-content")!;
-    el.textContent = "Generating...";
-    el.classList.remove("empty");
-    window.opener?.postMessage({ type: "summarize" }, "*");
-  });
-}
-
-function appendChat(role: string, text: string): void {
-  const el = document.createElement("div");
+export function appendChat(role: string, text: string): void {
+  if (!doc) return;
+  const el = doc.createElement("div");
   el.className = `chat-msg ${role}`;
   el.textContent = `${role === "user" ? "You" : "moanete"}: ${text}`;
-  document.getElementById("chat-messages")!.appendChild(el);
+  doc.getElementById("chat-messages")!.appendChild(el);
   el.scrollIntoView({ behavior: "smooth" });
 }
 
-// --- Insight tabs ---
-
-function toKey(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_|_$/g, "");
+export function setChatReply(answer: string, history: ChatMessage[]): void {
+  appendChat("assistant", answer);
+  chatHistory = history;
 }
 
-function rebuildInsightTabs(cats: string[]): void {
-  categories = cats;
-  const topTabs = document.getElementById("top-tabs")!;
-  const topPanels = document.getElementById("top-panels")!;
+// --- Summary ---
+
+function setupSummary(): void {
+  if (!doc) return;
+  doc.getElementById("btn-summarize")!.addEventListener("click", () => {
+    const el = doc!.getElementById("summary-content")!;
+    el.textContent = "Generating...";
+    el.classList.remove("empty");
+    onSummarize?.();
+  });
+}
+
+export function setSummary(text: string): void {
+  if (!doc) return;
+  const el = doc.getElementById("summary-content")!;
+  el.textContent = text;
+  el.classList.remove("empty");
+}
+
+// --- Insights ---
+
+export function rebuildInsightTabs(categories: string[]): void {
+  if (!doc) return;
+  const topTabs = doc.getElementById("top-tabs")!;
+  const topPanels = doc.getElementById("top-panels")!;
 
   topTabs.innerHTML = "";
   topPanels.innerHTML = "";
 
-  cats.forEach((name, i) => {
+  categories.forEach((name, i) => {
     const key = toKey(name);
-    const btn = document.createElement("button");
+    const btn = doc!.createElement("button");
     btn.textContent = name;
     btn.dataset.panel = `insight-${key}`;
     if (i === 0) btn.classList.add("active");
     topTabs.appendChild(btn);
 
-    const panel = document.createElement("div");
+    const panel = doc!.createElement("div");
     panel.className = `panel${i === 0 ? " active" : ""}`;
     panel.id = `insight-${key}`;
     panel.innerHTML = '<div class="empty">Nothing yet...</div>';
@@ -143,18 +186,18 @@ function rebuildInsightTabs(cats: string[]): void {
   });
 }
 
-function updateInsights(insights: Record<string, string[]>): void {
-  _insightData = insights;
+export function updateInsights(insights: Record<string, string[]>): void {
+  if (!doc) return;
   for (const [key, items] of Object.entries(insights)) {
-    const panel = document.getElementById(`insight-${key}`);
+    const panel = doc.getElementById(`insight-${key}`);
     if (!panel) continue;
 
     if (items.length === 0) {
       panel.innerHTML = '<div class="empty">Nothing yet...</div>';
     } else {
-      const ul = document.createElement("ul");
+      const ul = doc.createElement("ul");
       for (const item of items.slice(-10)) {
-        const li = document.createElement("li");
+        const li = doc.createElement("li");
         li.textContent = item;
         ul.appendChild(li);
       }
@@ -164,66 +207,31 @@ function updateInsights(insights: Record<string, string[]>): void {
   }
 }
 
-// --- Message handling ---
+// --- Transcript ---
 
-interface PipMessage {
-  type: string;
-  categories?: string[];
-  insights?: Record<string, string[]>;
-  transcript?: string;
-  text?: string;
-  answer?: string;
-  history?: ChatMessage[];
-}
-
-window.addEventListener("message", (event: MessageEvent<PipMessage>) => {
-  const { type } = event.data;
-
-  if (type === "init") {
-    rebuildInsightTabs(event.data.categories || []);
-    updateInsights(event.data.insights || {});
-    if (event.data.transcript) {
-      appendTranscript(event.data.transcript);
-    }
-  }
-
-  if (type === "transcript") {
-    appendTranscript(event.data.text || "");
-    updateLiveTranscript();
-  }
-
-  if (type === "insights") {
-    updateInsights(event.data.insights || {});
-  }
-
-  if (type === "chat-reply") {
-    appendChat("assistant", event.data.answer || "");
-    chatHistory = event.data.history || [];
-  }
-
-  if (type === "summary") {
-    const el = document.getElementById("summary-content")!;
-    el.textContent = event.data.text || "";
-    el.classList.remove("empty");
-  }
-});
-
-const transcriptBuffer: string[] = [];
-
-function appendTranscript(text: string): void {
+export function pipAppendTranscript(text: string): void {
+  if (!doc) return;
   transcriptBuffer.push(text);
-  const el = document.getElementById("full-transcript")!;
+  const el = doc.getElementById("full-transcript")!;
   el.classList.remove("empty");
   el.textContent = transcriptBuffer.join("\n");
   el.scrollTop = el.scrollHeight;
-}
 
-function updateLiveTranscript(): void {
-  const el = document.getElementById("live-transcript")!;
+  // Update live bar
+  const live = doc.getElementById("live-transcript")!;
   const full = transcriptBuffer.join(" ");
   const tail = full.length > 200 ? `...${full.slice(-200)}` : full;
-  el.innerHTML = `<strong>Transcript</strong> ${tail}`;
+  live.innerHTML = `<strong>Transcript</strong> ${tail}`;
 }
 
-// --- Init ---
-buildUI();
+export function seedPipState(
+  categories: string[],
+  insights: Record<string, string[]>,
+  transcript: string,
+): void {
+  rebuildInsightTabs(categories);
+  updateInsights(insights);
+  if (transcript) {
+    pipAppendTranscript(transcript);
+  }
+}
