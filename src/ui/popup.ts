@@ -1,11 +1,12 @@
 import { loadConfig, saveConfig, type Config } from "../core/config.ts";
 import { toKey } from "../core/analyzer.ts";
-import { Session } from "../core/session.ts";
+import { Session, type TranscriptEntry } from "../core/session.ts";
 import { answerQuestion, summarizeTranscript } from "../core/summarizer.ts";
 import {
   buildPipUI,
   destroyPipUI,
   pipAppendTranscript,
+  pipUpdateActivity,
   updateInsights as pipUpdateInsights,
   seedPipState,
   setChatReply as pipSetChatReply,
@@ -21,27 +22,37 @@ let chatHistory: ChatMessage[] = [];
 
 // --- Settings UI ---
 
-const KEY_FIELDS: Record<string, { label: string; key: keyof Config }> = {
-  openai: { label: "OpenAI API Key", key: "openaiApiKey" },
-  anthropic: { label: "Anthropic API Key", key: "anthropicApiKey" },
-  deepgram: { label: "Deepgram API Key", key: "deepgramApiKey" },
+interface DynamicField {
+  label: string;
+  key: keyof Config;
+  type?: string;
+}
+
+const KEY_FIELDS: Record<string, DynamicField> = {
+  openai: { label: "OpenAI API Key", key: "openaiApiKey", type: "password" },
+  anthropic: { label: "Anthropic API Key", key: "anthropicApiKey", type: "password" },
+  deepgram: { label: "Deepgram API Key", key: "deepgramApiKey", type: "password" },
+  whisperHost: { label: "Whisper Server URL", key: "whisperHost" },
+  whisperModel: { label: "Whisper Model", key: "whisperModel" },
 };
 
 function renderKeyFields(sttProvider: string, llmProvider: string, config: Config): void {
   const container = $<HTMLDivElement>("#key-fields");
   container.innerHTML = "";
 
-  const needed = new Set<string>();
-  if (sttProvider === "deepgram") needed.add("deepgram");
-  if (llmProvider === "openai") needed.add("openai");
-  if (llmProvider === "anthropic") needed.add("anthropic");
+  const needed: string[] = [];
+  if (sttProvider === "deepgram") needed.push("deepgram");
+  if (sttProvider === "whisper") needed.push("whisperHost", "whisperModel");
+  if (llmProvider === "openai") needed.push("openai");
+  if (llmProvider === "anthropic") needed.push("anthropic");
 
   for (const id of needed) {
     const field = KEY_FIELDS[id];
     if (!field) continue;
+    const inputType = field.type || "text";
     const el = document.createElement("label");
     el.className = "form-control w-full";
-    el.innerHTML = `<div class="label"><span class="label-text text-xs">${field.label}</span></div><input type="password" class="input input-bordered input-sm w-full" data-key="${field.key}" value="${config[field.key] || ""}" />`;
+    el.innerHTML = `<div class="label"><span class="label-text text-xs">${field.label}</span></div><input type="${inputType}" class="input input-bordered input-sm w-full" data-key="${field.key}" value="${config[field.key] || ""}" />`;
     container.appendChild(el);
   }
 }
@@ -86,9 +97,9 @@ function setStatus(state: string, text: string): void {
 async function startSession(): Promise<void> {
   session = new Session();
 
-  session.onTranscript = (text) => {
-    appendTranscript(text);
-    pipAppendTranscript(text);
+  session.onTranscript = (entry: TranscriptEntry) => {
+    appendTranscript(entry);
+    pipAppendTranscript(entry);
   };
 
   session.onInsights = (insights) => {
@@ -100,12 +111,38 @@ async function startSession(): Promise<void> {
     setStatus("error", msg);
   };
 
+  session.onWarning = (msg) => {
+    const container = $<HTMLDivElement>("#compat-hints");
+    const el = document.createElement("div");
+    el.className = "alert alert-warning alert-sm py-1 px-3";
+    el.innerHTML = `<span>${msg}</span><button class="btn btn-ghost btn-xs btn-circle">✕</button>`;
+    el.querySelector("button")!.addEventListener("click", () => el.remove());
+    container.appendChild(el);
+  };
+
+  session.onActivity = (source, level) => {
+    // Update navbar indicators
+    const dot = source === "mic" ? $<HTMLSpanElement>("#mic-level") : $<HTMLSpanElement>("#tab-level");
+    if (level > 0.01) {
+      dot.className = "w-2 h-2 rounded-full bg-success animate-pulse";
+    } else {
+      dot.className = "w-2 h-2 rounded-full bg-success/30";
+    }
+    // Update PiP indicators
+    pipUpdateActivity(source, level);
+  };
+
   try {
     await session.start();
     setStatus("on", "Listening...");
     $<HTMLButtonElement>("#btn-start").hidden = true;
     $<HTMLButtonElement>("#btn-stop").hidden = false;
     $<HTMLButtonElement>("#btn-pip").hidden = false;
+    $<HTMLDivElement>("#audio-indicators").hidden = false;
+
+    // Hide tab indicator if not capturing tab
+    const cfg = loadConfig();
+    $<HTMLSpanElement>("#tab-level").parentElement!.hidden = !cfg.captureTab;
 
     // Reset transcript
     const el = $<HTMLDivElement>("#transcript-content");
@@ -123,20 +160,33 @@ function stopSession(): void {
   $<HTMLButtonElement>("#btn-start").hidden = false;
   $<HTMLButtonElement>("#btn-stop").hidden = true;
   $<HTMLButtonElement>("#btn-pip").hidden = true;
+  $<HTMLDivElement>("#audio-indicators").hidden = true;
   pipWindow?.close();
 }
 
 // --- Transcript display ---
 
-function appendTranscript(text: string): void {
-  const el = $<HTMLDivElement>("#transcript-content");
-  if (el.classList.contains("italic")) {
-    el.textContent = "";
-    el.className = "text-sm leading-relaxed whitespace-pre-wrap break-words";
+function appendTranscript(entry: TranscriptEntry): void {
+  const container = $<HTMLDivElement>("#transcript-content");
+  if (container.classList.contains("italic")) {
+    container.innerHTML = "";
+    container.className = "text-sm leading-relaxed whitespace-pre-wrap break-words";
   }
-  el.textContent += `${text}\n`;
+
+  const line = document.createElement("div");
+  const label = entry.source === "mic" ? "You" : "Them";
+  const color = entry.source === "mic" ? "text-info" : "text-warning";
+  line.innerHTML = `<span class="${color} font-semibold">${label}:</span> ${escapeHtml(entry.text)}`;
+  container.appendChild(line);
+
   const box = $<HTMLDivElement>("#transcript-box");
   box.scrollTop = box.scrollHeight;
+}
+
+function escapeHtml(text: string): string {
+  const el = document.createElement("span");
+  el.textContent = text;
+  return el.innerHTML;
 }
 
 // --- Dashboard insights ---

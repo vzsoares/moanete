@@ -41,10 +41,17 @@ bun run build         # production build → dist/
 
 | | Free tier | Paid tier |
 |---|---|---|
-| **STT** | Browser SpeechRecognition (built-in, free) | Deepgram (BYOK or hosted) |
+| **STT** | Browser SpeechRecognition (free), local Whisper server (free) | Deepgram (BYOK or hosted) |
 | **LLM** | Ollama (local) or BYOK OpenAI/Anthropic | Hosted proxy (subscription) |
 
 No backend needed for the free tier — all API calls go directly from the browser.
+
+For local STT via Whisper (needed for tab/system audio transcription):
+
+```sh
+just whisper              # uses 'base' model, runs at http://localhost:8000
+just whisper large-v3     # use a bigger model for better accuracy
+```
 
 For local LLM via Ollama:
 
@@ -60,7 +67,7 @@ Settings are configured in the app and stored in `localStorage`.
 
 | Setting | Default | Options |
 |---------|---------|---------|
-| STT Provider | Browser (free) | `browser`, `deepgram` |
+| STT Provider | Browser (free) | `browser`, `whisper`, `deepgram` |
 | LLM Provider | Ollama (local) | `ollama`, `openai`, `anthropic` |
 | Insight Tabs | Suggestions, Key Points, Action Items, Questions | Any comma-separated list |
 | Capture Mic | On | Toggle |

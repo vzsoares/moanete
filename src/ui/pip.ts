@@ -5,6 +5,7 @@
  * transcript, insights, or summary. No tabs, no chat, no complex layout.
  */
 import type { ChatMessage } from "../providers/llm/types.ts";
+import type { TranscriptEntry } from "../core/session.ts";
 import { toKey } from "../core/analyzer.ts";
 import PIP_CSS from "./global.css?inline";
 
@@ -38,8 +39,10 @@ export function buildPipUI(pipDoc: Document, _cssUrl: string, callbacks: PipCall
     <header class="flex items-center gap-2 px-3 py-1.5 bg-base-300 border-b border-base-content/10 shrink-0">
       <h1 class="text-sm font-semibold text-primary">moanete</h1>
       <div class="flex-1"></div>
-      <span id="mic-dot" class="w-2 h-2 rounded-full bg-success animate-pulse" title="Mic active"></span>
-      <span id="pc-dot" class="w-2 h-2 rounded-full bg-base-content/30" title="PC audio inactive"></span>
+      <span class="text-[10px] text-base-content/40">mic</span>
+      <span id="pip-mic-dot" class="w-2 h-2 rounded-full bg-base-content/20" title="Mic"></span>
+      <span class="text-[10px] text-base-content/40">tab</span>
+      <span id="pip-tab-dot" class="w-2 h-2 rounded-full bg-base-content/20" title="Tab"></span>
     </header>
 
     <div class="flex gap-1 px-3 py-1 bg-base-300 border-b border-base-content/10 shrink-0">
@@ -134,9 +137,10 @@ function renderInsightsView(): void {
 
 // --- Public API (called from popup.ts) ---
 
-export function pipAppendTranscript(text: string): void {
+export function pipAppendTranscript(entry: TranscriptEntry): void {
   if (!doc) return;
-  transcriptBuffer.push(text);
+  const label = entry.source === "mic" ? "You" : "Them";
+  transcriptBuffer.push(`${label}: ${entry.text}`);
   const el = doc.getElementById("pip-transcript")!;
   el.className = "text-xs leading-relaxed whitespace-pre-wrap";
   el.textContent = transcriptBuffer.join("\n");
@@ -146,6 +150,17 @@ export function pipAppendTranscript(text: string): void {
 export function updateInsights(insights: Record<string, string[]>): void {
   currentInsights = insights;
   if (currentView === "insights") renderInsightsView();
+}
+
+export function pipUpdateActivity(source: "mic" | "tab", level: number): void {
+  if (!doc) return;
+  const dot = doc.getElementById(source === "mic" ? "pip-mic-dot" : "pip-tab-dot");
+  if (!dot) return;
+  if (level > 0.01) {
+    dot.className = "w-2 h-2 rounded-full bg-success animate-pulse";
+  } else {
+    dot.className = "w-2 h-2 rounded-full bg-success/30";
+  }
 }
 
 export function setChatReply(_answer: string, _history: ChatMessage[]): void {
@@ -171,6 +186,12 @@ export function seedPipState(
 ): void {
   currentCategories = categories;
   currentInsights = insights;
-  if (transcript) pipAppendTranscript(transcript);
+  if (transcript && doc) {
+    // Seed with raw transcript text (already has [You]/[Them] labels from analyzer)
+    transcriptBuffer.push(transcript);
+    const el = doc.getElementById("pip-transcript")!;
+    el.className = "text-xs leading-relaxed whitespace-pre-wrap";
+    el.textContent = transcriptBuffer.join("\n");
+  }
   if (currentView === "insights") renderInsightsView();
 }

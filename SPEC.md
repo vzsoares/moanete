@@ -28,6 +28,7 @@ Uses Vite + Bun + Biome + Tailwind CSS + DaisyUI + tw-animate-css.
     │   ├── stt/
     │   │   ├── types.ts           # STT provider interface + registry
     │   │   ├── browser.ts         # Free: webkitSpeechRecognition
+    │   │   ├── whisper.ts         # Free: local Whisper server (OpenAI-compatible)
     │   │   └── deepgram.ts        # Paid: Deepgram WebSocket streaming
     │   └── llm/
     │       ├── types.ts           # LLM provider interface + registry
@@ -55,7 +56,7 @@ Uses Vite + Bun + Biome + Tailwind CSS + DaisyUI + tw-animate-css.
 
 | Tier | STT | LLM | Infra cost |
 |------|-----|-----|------------|
-| Free (BYOK) | Browser `webkitSpeechRecognition` (free) or user's Deepgram key | User's own Ollama / OpenAI / Anthropic key | Zero |
+| Free (BYOK) | Browser `webkitSpeechRecognition` (free), local Whisper server, or user's Deepgram key | User's own Ollama / OpenAI / Anthropic key | Zero |
 | Hosted (paid) | Proxied Deepgram | Proxied Claude/GPT via backend | Server + API margin |
 
 ---
@@ -69,7 +70,7 @@ Pluggable registry pattern — providers register via side-effect imports:
 // LLM: { name, requiresKey, configure(config), chat(messages, opts) → Promise<string> }
 ```
 
-**STT providers**: `browser` (free, webkitSpeechRecognition), `deepgram` (WebSocket streaming)
+**STT providers**: `browser` (free, webkitSpeechRecognition), `whisper` (local, OpenAI-compatible endpoint), `deepgram` (WebSocket streaming)
 **LLM providers**: `ollama` (local), `openai`, `anthropic` (needs CORS proxy for hosted)
 
 ---
@@ -158,6 +159,8 @@ Stored in `localStorage`.
 | `anthropicModel` | `claude-sonnet-4-20250514` | Anthropic model |
 | `anthropicBaseUrl` | `/api/anthropic` | Proxy URL for CORS |
 | `deepgramApiKey` | *(empty)* | Deepgram API key (BYOK) |
+| `whisperHost` | `http://localhost:8000` | Local Whisper server URL |
+| `whisperModel` | `base` | Whisper model name |
 | `insightTabs` | `Suggestions,Key Points,...` | Comma-separated categories |
 | `analysisIntervalMs` | `15000` | LLM analysis interval |
 | `captureMic` | `true` | Capture microphone |

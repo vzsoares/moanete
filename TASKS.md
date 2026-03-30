@@ -57,7 +57,7 @@
 - [x] Flatten repo — remove Python TUI, move to root
 - [x] Project structure with Vite + Bun + Biome + TypeScript
 - [x] Pluggable provider registry pattern (STT + LLM)
-- [x] STT providers: Browser SpeechRecognition (free), Deepgram (paid)
+- [x] STT providers: Browser SpeechRecognition (free), Whisper (local), Deepgram (paid)
 - [x] LLM providers: Ollama (local/free), OpenAI, Anthropic
 - [x] Core engine: Analyzer, Summarizer, Audio capture, Config, Session orchestrator
 - [x] Configurable STT language dropdown (20 languages, BCP 47 tags)
@@ -73,6 +73,7 @@
 ### Fix broken features
 - [x] **Fix PiP** — removed `chrome.runtime.getURL`, Document PiP API works from plain web page
 - [x] **Fix PC audio capture** — was using `video: false` which skips the share picker; now uses `video: true` and discards the video track
+- [x] **Separate mic/machine transcription** — two independent STT instances, labeled "You" (mic) vs "Them" (tab). Tab audio uses Deepgram (Browser STT can't accept custom audio sources). Analyzer receives `[You]`/`[Them]` prefixed text for better summaries.
 - [x] Test Browser SpeechRecognition STT end-to-end — code reviewed, no chrome dependencies
 - [x] Test Deepgram WebSocket STT — code reviewed, WebSocket streaming works independently
 

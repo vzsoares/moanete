@@ -21,6 +21,17 @@
       <span id="status-text" class="text-xs text-base-content/60">Stopped</span>
     </div>
 
+    <div id="audio-indicators" class="flex items-center gap-3 ml-2" hidden>
+      <div class="flex items-center gap-1.5">
+        <span id="mic-level" class="w-2 h-2 rounded-full bg-base-content/20"></span>
+        <span class="text-xs text-base-content/50">Mic</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span id="tab-level" class="w-2 h-2 rounded-full bg-base-content/20"></span>
+        <span class="text-xs text-base-content/50">Tab</span>
+      </div>
+    </div>
+
     <div class="flex-1"></div>
 
     <div class="flex items-center gap-2">
@@ -107,6 +118,7 @@
           <div class="label"><span class="label-text text-xs">STT Provider</span></div>
           <select id="stt-provider" class="select select-bordered select-sm w-full">
             <option value="browser">Browser (free)</option>
+            <option value="whisper">Whisper (local)</option>
             <option value="deepgram">Deepgram</option>
           </select>
         </label>
