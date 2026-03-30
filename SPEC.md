@@ -14,12 +14,15 @@ Uses Vite + Bun + Biome + Tailwind CSS + DaisyUI + tw-animate-css.
 
 ```
 ├── index.html                     # Single-page app entry point
+├── justfile                       # Task runner (just dev, just whisper, etc.)
 ├── package.json                   # Bun + Vite + Biome
 ├── biome.json                     # Linter/formatter config
+├── scripts/
+│   └── whisper-server.py          # Local Whisper STT server (uv run)
 └── src/
     ├── core/
     │   ├── analyzer.ts            # Real-time insight extraction (setInterval)
-    │   ├── audio.ts               # Web Audio API + getUserMedia/getDisplayMedia
+    │   ├── audio.ts               # Separate mic/tab audio capture streams
     │   ├── config.ts              # localStorage persistence
     │   ├── session.ts             # Orchestrator (audio → STT → analyzer → UI)
     │   └── summarizer.ts          # On-demand summarization + Q&A
@@ -27,9 +30,9 @@ Uses Vite + Bun + Biome + Tailwind CSS + DaisyUI + tw-animate-css.
     │   ├── index.ts               # Registry barrel
     │   ├── stt/
     │   │   ├── types.ts           # STT provider interface + registry
-    │   │   ├── browser.ts         # Free: webkitSpeechRecognition
-    │   │   ├── whisper.ts         # Free: local Whisper server (OpenAI-compatible)
-    │   │   └── deepgram.ts        # Paid: Deepgram WebSocket streaming
+    │   │   ├── browser.ts         # Free: webkitSpeechRecognition (mic only)
+    │   │   ├── whisper.ts         # Free: local Whisper server (mic + tab)
+    │   │   └── deepgram.ts        # Paid: Deepgram WebSocket streaming (mic + tab)
     │   └── llm/
     │       ├── types.ts           # LLM provider interface + registry
     │       ├── ollama.ts          # Free: local Ollama
@@ -37,8 +40,8 @@ Uses Vite + Bun + Biome + Tailwind CSS + DaisyUI + tw-animate-css.
     │       └── anthropic.ts       # Paid: Anthropic (needs CORS proxy)
     └── ui/
         ├── global.css             # Tailwind + DaisyUI + tw-animate-css (shared by app + PiP)
-        ├── popup.ts               # Settings, session control, PiP launch
-        └── pip.ts                 # Floating overlay: transcript, insights, chat
+        ├── popup.ts               # Dashboard UI, settings modal, PiP launch
+        └── pip.ts                 # Minimal floating overlay (transcript/insights/summary toggle)
 ```
 
 ---
@@ -48,7 +51,8 @@ Uses Vite + Bun + Biome + Tailwind CSS + DaisyUI + tw-animate-css.
 - **Runtime / Package manager**: Bun
 - **Bundler**: Vite
 - **Linter / Formatter**: Biome
-- **CSS**: Tailwind CSS + DaisyUI
+- **CSS**: Tailwind CSS + DaisyUI + tw-animate-css
+- **Task runner**: just (justfile)
 
 ---
 
@@ -79,8 +83,9 @@ Pluggable registry pattern — providers register via side-effect imports:
 
 - **Microphone**: `navigator.mediaDevices.getUserMedia({ audio: true })`
 - **Tab/system audio**: `getDisplayMedia({ video: true, audio: true })` (video track discarded)
-- **Mixing**: Web Audio API `AudioContext` → `GainNode` (normalized) → `ScriptProcessor`
-- **Output**: Float32Array chunks at 16kHz mono, fed to STT provider
+- **Separate streams**: mic and tab each have their own `ScriptProcessorNode` and STT instance
+- **Output**: Float32Array chunks at 16kHz mono, labeled `[You]` (mic) / `[Them]` (tab)
+- **Activity detection**: RMS level per source, exposed to UI for status indicators
 
 ---
 

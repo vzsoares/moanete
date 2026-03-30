@@ -105,22 +105,20 @@ bun run fix           # biome auto-fix
 
 ```
 ├── index.html                     # Single-page app entry point
+├── justfile                       # Task runner (just dev, just whisper, etc.)
 ├── package.json                   # Bun + Vite + Biome
 ├── biome.json                     # Linter/formatter config
+├── scripts/
+│   └── whisper-server.py          # Local Whisper STT server (uv run)
 └── src/
-    ├── core/
-    │   ├── analyzer.ts            # Real-time insight extraction
-    │   ├── audio.ts               # Audio capture + mixing
-    │   ├── config.ts              # Settings persistence (localStorage)
-    │   ├── session.ts             # Orchestrator
-    │   └── summarizer.ts          # Summarization + Q&A
+    ├── core/                      # Audio capture, analyzer, session, config
     ├── providers/
-    │   ├── stt/                   # STT: browser (free), deepgram
+    │   ├── stt/                   # STT: browser (free), whisper (local), deepgram
     │   └── llm/                   # LLM: ollama, openai, anthropic
     └── ui/
-        ├── global.css             # Tailwind + DaisyUI + tw-animate-css (shared by app + PiP)
-        ├── popup.ts               # Main app UI
-        └── pip.ts                 # PiP floating overlay
+        ├── global.css             # Tailwind + DaisyUI + tw-animate-css
+        ├── popup.ts               # Dashboard UI + settings modal
+        └── pip.ts                 # Minimal PiP floating overlay
 ```
 
 ## Requirements

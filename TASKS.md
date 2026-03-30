@@ -91,6 +91,14 @@
 - [ ] Session history browser
 - [x] **Simplify PiP overlay** — minimal floating widget with mic/PC status dots, single content area with transcript/insights/summary toggle
 
+### Fix PiP bugs
+- [ ] Tab auto-switches to Transcript on its own — view toggle not holding state
+- [ ] Transcript tab has broken text styling
+- [ ] Summary displays `[object Object]` instead of text
+
+### Whisper STT
+- [ ] Fix CORS — whisper server at :8000 blocked by browser; add Vite proxy
+
 ### Playwright testing
 - [ ] Add Playwright as dev dependency
 - [ ] Use Playwright MCP to interactively debug PiP and audio issues
