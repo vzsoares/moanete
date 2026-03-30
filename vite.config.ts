@@ -7,4 +7,12 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
   },
+  server: {
+    proxy: {
+      "/whisper": {
+        target: "http://localhost:8000",
+        rewrite: (path) => path.replace(/^\/whisper/, ""),
+      },
+    },
+  },
 });

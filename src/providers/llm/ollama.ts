@@ -34,7 +34,8 @@ function createOllamaLLM(): LLMProvider {
       }
 
       const data = await res.json();
-      return data.message.content;
+      const content = data.message?.content;
+      return typeof content === "string" ? content : JSON.stringify(content);
     },
   };
 }

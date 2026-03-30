@@ -92,8 +92,18 @@ export class Session {
     };
 
     // Init mic STT
+    // When using Browser STT + tab capture, Browser STT picks up tab audio
+    // from speakers and mislabels it as "You". Use feedAudio-based provider instead.
     if (cfg.captureMic) {
-      this._micSTT = createSTT(cfg.sttProvider);
+      let micProvider = cfg.sttProvider;
+      if (cfg.captureTab && cfg.sttProvider === "browser") {
+        const fallback = this._pickTabSTTProvider(cfg);
+        if (fallback) {
+          micProvider = fallback;
+          this.onWarning?.("Switched mic STT to " + (fallback === "whisper" ? "Whisper" : "Deepgram") + " — Browser STT picks up tab audio from speakers");
+        }
+      }
+      this._micSTT = createSTT(micProvider);
       this._micSTT.configure(sttConfig);
       this._micSTT.start((text) => {
         this._analyzer!.feed(`[You] ${text}`);

@@ -92,12 +92,14 @@
 - [x] **Simplify PiP overlay** — minimal floating widget with mic/PC status dots, single content area with transcript/insights/summary toggle
 
 ### Fix PiP bugs
-- [ ] Tab auto-switches to Transcript on its own — view toggle not holding state
-- [ ] Transcript tab has broken text styling
-- [ ] Summary displays `[object Object]` instead of text
+- [x] Tab auto-switches to Transcript — `pipAppendTranscript` was clobbering class, removing `hidden`
+- [x] Transcript tab broken styling — same class clobber; now only removes placeholder classes
+- [x] Summary `[object Object]` — added safety `String()` in Ollama provider + PiP setSummary
+- [x] Insights `[object Object]` — analyzer now coerces non-string items from LLM JSON response
+- [x] You/Them mixed — Browser STT picks up tab audio from speakers; auto-switch to Whisper/Deepgram for mic when tab capture is enabled
 
 ### Whisper STT
-- [ ] Fix CORS — whisper server at :8000 blocked by browser; add Vite proxy
+- [x] Fix CORS — Vite proxy `/whisper` → `localhost:8000`, no more cross-origin issues
 
 ### Playwright testing
 - [ ] Add Playwright as dev dependency

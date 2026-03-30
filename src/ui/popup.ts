@@ -199,16 +199,16 @@ function updateDashboardInsights(insights: Record<string, string[]>): void {
     if (items.length === 0) {
       panel.innerHTML = '<p class="text-xs text-base-content/40 italic">Nothing yet...</p>';
     } else {
-      const ul = document.createElement("ul");
-      ul.className = "list-disc list-inside flex flex-col gap-1 text-xs marker:text-primary";
+      const container = document.createElement("div");
+      container.className = "flex flex-col gap-2";
       for (const item of items.slice(-10)) {
-        const li = document.createElement("li");
-        li.className = "leading-snug";
-        li.textContent = item;
-        ul.appendChild(li);
+        const card = document.createElement("div");
+        card.className = "bg-base-200 rounded-lg px-3 py-2 text-xs leading-relaxed border-l-2 border-primary";
+        card.textContent = item;
+        container.appendChild(card);
       }
       panel.innerHTML = "";
-      panel.appendChild(ul);
+      panel.appendChild(container);
     }
   }
 }

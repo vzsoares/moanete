@@ -30,7 +30,7 @@ export const DEFAULTS: Config = {
   anthropicModel: "claude-sonnet-4-20250514",
   anthropicBaseUrl: "/api/anthropic",
   deepgramApiKey: "",
-  whisperHost: "http://localhost:8000",
+  whisperHost: "/whisper",
   whisperModel: "base",
   sttLanguage: "en-US",
   insightTabs: "Suggestions,Key Points,Action Items,Questions",

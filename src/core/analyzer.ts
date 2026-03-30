@@ -133,11 +133,20 @@ export class Analyzer {
       });
       this._lastError = null;
 
-      const data = JSON.parse(raw) as Record<string, string[]>;
+      const data = JSON.parse(raw) as Record<string, unknown[]>;
       for (const key of this._keys) {
         const existing = this._insights[key];
         if (!existing) continue;
-        for (const item of data[key] || []) {
+        for (const raw_item of data[key] || []) {
+          const item = typeof raw_item === "string"
+            ? raw_item
+            : raw_item && typeof raw_item === "object"
+              ? ((raw_item as Record<string, unknown>).value ??
+                 (raw_item as Record<string, unknown>).text ??
+                 (raw_item as Record<string, unknown>).content ??
+                 Object.values(raw_item).find((v) => typeof v === "string") ??
+                 "") as string
+              : String(raw_item);
           if (item && !existing.includes(item)) {
             existing.push(item);
           }

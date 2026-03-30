@@ -70,21 +70,31 @@ export function destroyPipUI(): void {
   onSummarize = null;
 }
 
+function syncView(): void {
+  if (!doc) return;
+  for (const b of doc.querySelectorAll<HTMLButtonElement>("[data-view]")) {
+    b.className = `btn btn-xs ${b.dataset.view === currentView ? "btn-primary" : "btn-ghost"}`;
+  }
+
+  const views = { transcript: "pip-transcript", insights: "pip-insights", summary: "pip-summary" };
+  for (const [view, id] of Object.entries(views)) {
+    const el = doc.getElementById(id);
+    if (!el) continue;
+    if (view === currentView) {
+      el.classList.remove("hidden");
+    } else {
+      el.classList.add("hidden");
+    }
+  }
+}
+
 function setupViewToggle(): void {
   if (!doc) return;
   for (const btn of doc.querySelectorAll<HTMLButtonElement>("[data-view]")) {
     btn.addEventListener("click", () => {
       if (!doc) return;
       currentView = btn.dataset.view as typeof currentView;
-
-      for (const b of doc.querySelectorAll<HTMLButtonElement>("[data-view]")) {
-        b.className = `btn btn-xs ${b.dataset.view === currentView ? "btn-primary" : "btn-ghost"}`;
-      }
-
-      doc.getElementById("pip-transcript")!.classList.toggle("hidden", currentView !== "transcript");
-      doc.getElementById("pip-insights")!.classList.toggle("hidden", currentView !== "insights");
-      doc.getElementById("pip-summary")!.classList.toggle("hidden", currentView !== "summary");
-
+      syncView();
       if (currentView === "insights") renderInsightsView();
     });
   }
@@ -120,15 +130,15 @@ function renderInsightsView(): void {
     if (items.length === 0) {
       section.innerHTML += '<p class="text-base-content/40 italic">Nothing yet...</p>';
     } else {
-      const ul = doc.createElement("ul");
-      ul.className = "list-disc list-inside flex flex-col gap-0.5 marker:text-primary";
+      const list = doc.createElement("div");
+      list.className = "flex flex-col gap-1.5";
       for (const item of items.slice(-5)) {
-        const li = doc.createElement("li");
-        li.className = "leading-snug";
-        li.textContent = item;
-        ul.appendChild(li);
+        const card = doc.createElement("div");
+        card.className = "bg-base-200 rounded px-2 py-1 leading-snug border-l-2 border-primary";
+        card.textContent = item;
+        list.appendChild(card);
       }
-      section.appendChild(ul);
+      section.appendChild(list);
     }
 
     container.appendChild(section);
@@ -142,7 +152,8 @@ export function pipAppendTranscript(entry: TranscriptEntry): void {
   const label = entry.source === "mic" ? "You" : "Them";
   transcriptBuffer.push(`${label}: ${entry.text}`);
   const el = doc.getElementById("pip-transcript")!;
-  el.className = "text-xs leading-relaxed whitespace-pre-wrap";
+  // Remove placeholder styling but preserve hidden state
+  el.classList.remove("italic", "text-base-content/50");
   el.textContent = transcriptBuffer.join("\n");
   el.scrollTop = el.scrollHeight;
 }
@@ -170,8 +181,8 @@ export function setChatReply(_answer: string, _history: ChatMessage[]): void {
 export function setSummary(text: string): void {
   if (!doc) return;
   const el = doc.getElementById("pip-summary-text")!;
-  el.textContent = text;
-  el.className = "";
+  el.textContent = typeof text === "string" ? text : String(text);
+  el.classList.remove("italic", "text-base-content/50");
 }
 
 export function rebuildInsightTabs(categories: string[]): void {
@@ -190,7 +201,7 @@ export function seedPipState(
     // Seed with raw transcript text (already has [You]/[Them] labels from analyzer)
     transcriptBuffer.push(transcript);
     const el = doc.getElementById("pip-transcript")!;
-    el.className = "text-xs leading-relaxed whitespace-pre-wrap";
+    el.classList.remove("italic", "text-base-content/50");
     el.textContent = transcriptBuffer.join("\n");
   }
   if (currentView === "insights") renderInsightsView();

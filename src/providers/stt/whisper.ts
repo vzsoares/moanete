@@ -112,7 +112,7 @@ function createWhisperSTT(): STTProvider {
     requiresKey: false,
 
     configure(config) {
-      host = config.whisperHost || "http://localhost:8000";
+      host = config.whisperHost || "/whisper";
       model = config.whisperModel || "base";
       language = (config.language || "en-US").split("-")[0] || "en";
     },
