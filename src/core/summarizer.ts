@@ -31,10 +31,7 @@ Use the provided context (transcript and extracted insights) to answer.
 If you don't have enough information, say so honestly.
 Be concise.`;
 
-export async function summarizeTranscript(
-  llm: LLMProvider,
-  transcript: string,
-): Promise<string> {
+export async function summarizeTranscript(llm: LLMProvider, transcript: string): Promise<string> {
   if (!transcript.trim()) return "No transcript available yet.";
 
   return llm.chat(

@@ -1,4 +1,4 @@
-import { registerSTT, type STTProvider } from "./types.ts";
+import { type STTProvider, registerSTT } from "./types.ts";
 
 const BUFFER_SECONDS = 4;
 const SAMPLE_RATE = 16000;

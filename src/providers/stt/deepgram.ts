@@ -1,4 +1,4 @@
-import { registerSTT, type STTProvider } from "./types.ts";
+import { type STTProvider, registerSTT } from "./types.ts";
 
 function createDeepgramSTT(): STTProvider {
   let socket: WebSocket | null = null;
@@ -33,10 +33,7 @@ function createDeepgramSTT(): STTProvider {
         channels: "1",
       });
 
-      socket = new WebSocket(
-        `wss://api.deepgram.com/v1/listen?${params}`,
-        ["token", apiKey],
-      );
+      socket = new WebSocket(`wss://api.deepgram.com/v1/listen?${params}`, ["token", apiKey]);
 
       socket.onmessage = (event: MessageEvent) => {
         const data = JSON.parse(event.data as string);

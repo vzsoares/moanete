@@ -11,7 +11,8 @@
     "rules": {
       "recommended": true,
       "correctness": {
-        "noUnusedVariables": "warn"
+        "noUnusedVariables": "warn",
+        "noUnknownProperty": "off"
       },
       "style": {
         "noNonNullAssertion": "off"

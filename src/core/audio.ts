@@ -64,7 +64,9 @@ export class AudioCapture {
       }
 
       if (this._tabStream.getAudioTracks().length === 0) {
-        console.warn("[audio] No audio tracks from getDisplayMedia — user may not have shared audio");
+        console.warn(
+          "[audio] No audio tracks from getDisplayMedia — user may not have shared audio",
+        );
         this._tabStream = null;
       } else {
         this._tabProcessor = this._wireSource(this._tabStream, "tab");
@@ -108,8 +110,8 @@ export class AudioCapture {
   stop(): void {
     this._micProcessor?.disconnect();
     this._tabProcessor?.disconnect();
-    this._micStream?.getTracks().forEach((t) => t.stop());
-    this._tabStream?.getTracks().forEach((t) => t.stop());
+    for (const t of this._micStream?.getTracks() ?? []) t.stop();
+    for (const t of this._tabStream?.getTracks() ?? []) t.stop();
     void this._ctx?.close();
 
     this._micProcessor = null;

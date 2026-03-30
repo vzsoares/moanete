@@ -1,4 +1,4 @@
-import { registerLLM, type LLMProvider } from "./types.ts";
+import { type LLMProvider, registerLLM } from "./types.ts";
 
 function createOllamaLLM(): LLMProvider {
   let host = "http://localhost:11434";
@@ -16,9 +16,7 @@ function createOllamaLLM(): LLMProvider {
     async chat(messages, opts = {}) {
       const payload = {
         model,
-        messages: opts.system
-          ? [{ role: "system", content: opts.system }, ...messages]
-          : messages,
+        messages: opts.system ? [{ role: "system", content: opts.system }, ...messages] : messages,
         stream: false,
         options: { num_predict: opts.maxTokens || 1024 },
       };

@@ -16,12 +16,7 @@ Rules:
 - Be concise — one sentence per item max.
 - Do not repeat items already in prior context.`;
 
-export const DEFAULT_CATEGORIES = [
-  "Suggestions",
-  "Key Points",
-  "Action Items",
-  "Questions",
-];
+export const DEFAULT_CATEGORIES = ["Suggestions", "Key Points", "Action Items", "Questions"];
 
 export function toKey(name: string): string {
   return name
@@ -72,9 +67,7 @@ export class Analyzer {
   }
 
   get insights(): Record<string, string[]> {
-    return Object.fromEntries(
-      Object.entries(this._insights).map(([k, v]) => [k, [...v]]),
-    );
+    return Object.fromEntries(Object.entries(this._insights).map(([k, v]) => [k, [...v]]));
   }
 
   get lastError(): string | null {
@@ -138,15 +131,16 @@ export class Analyzer {
         const existing = this._insights[key];
         if (!existing) continue;
         for (const raw_item of data[key] || []) {
-          const item = typeof raw_item === "string"
-            ? raw_item
-            : raw_item && typeof raw_item === "object"
-              ? ((raw_item as Record<string, unknown>).value ??
-                 (raw_item as Record<string, unknown>).text ??
-                 (raw_item as Record<string, unknown>).content ??
-                 Object.values(raw_item).find((v) => typeof v === "string") ??
-                 "") as string
-              : String(raw_item);
+          const item =
+            typeof raw_item === "string"
+              ? raw_item
+              : raw_item && typeof raw_item === "object"
+                ? (((raw_item as Record<string, unknown>).value ??
+                    (raw_item as Record<string, unknown>).text ??
+                    (raw_item as Record<string, unknown>).content ??
+                    Object.values(raw_item).find((v) => typeof v === "string") ??
+                    "") as string)
+                : String(raw_item);
           if (item && !existing.includes(item)) {
             existing.push(item);
           }

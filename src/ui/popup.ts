@@ -1,21 +1,20 @@
-import { loadConfig, saveConfig, type Config } from "../core/config.ts";
 import { toKey } from "../core/analyzer.ts";
+import { type Config, loadConfig, saveConfig } from "../core/config.ts";
 import { Session, type TranscriptEntry } from "../core/session.ts";
 import { answerQuestion, summarizeTranscript } from "../core/summarizer.ts";
+import type { ChatMessage } from "../providers/llm/types.ts";
 import {
   buildPipUI,
   destroyPipUI,
   pipAppendTranscript,
+  setChatReply as pipSetChatReply,
+  setSummary as pipSetSummary,
   pipUpdateActivity,
   updateInsights as pipUpdateInsights,
   seedPipState,
-  setChatReply as pipSetChatReply,
-  setSummary as pipSetSummary,
 } from "./pip.ts";
-import type { ChatMessage } from "../providers/llm/types.ts";
 
-const $ = <T extends HTMLElement>(sel: string): T =>
-  document.querySelector<T>(sel)!;
+const $ = <T extends HTMLElement>(sel: string): T => document.querySelector<T>(sel)!;
 
 let session: Session | null = null;
 let chatHistory: ChatMessage[] = [];
@@ -122,7 +121,8 @@ async function startSession(): Promise<void> {
 
   session.onActivity = (source, level) => {
     // Update navbar indicators
-    const dot = source === "mic" ? $<HTMLSpanElement>("#mic-level") : $<HTMLSpanElement>("#tab-level");
+    const dot =
+      source === "mic" ? $<HTMLSpanElement>("#mic-level") : $<HTMLSpanElement>("#tab-level");
     if (level > 0.01) {
       dot.className = "w-2 h-2 rounded-full bg-success animate-pulse";
     } else {
@@ -147,7 +147,8 @@ async function startSession(): Promise<void> {
     // Reset transcript
     const el = $<HTMLDivElement>("#transcript-content");
     el.textContent = "Listening...";
-    el.className = "text-sm leading-relaxed text-base-content/50 italic whitespace-pre-wrap break-words";
+    el.className =
+      "text-sm leading-relaxed text-base-content/50 italic whitespace-pre-wrap break-words";
   } catch (e) {
     setStatus("error", e instanceof Error ? e.message : String(e));
   }
@@ -203,7 +204,8 @@ function updateDashboardInsights(insights: Record<string, string[]>): void {
       container.className = "flex flex-col gap-2";
       for (const item of items.slice(-10)) {
         const card = document.createElement("div");
-        card.className = "bg-base-200 rounded-lg px-3 py-2 text-xs leading-relaxed border-l-2 border-primary";
+        card.className =
+          "bg-base-200 rounded-lg px-3 py-2 text-xs leading-relaxed border-l-2 border-primary";
         card.textContent = item;
         container.appendChild(card);
       }
@@ -371,7 +373,7 @@ function detectCompatHints(): void {
   const hints: string[] = [];
   const ua = navigator.userAgent;
   const isFirefox = ua.includes("Firefox");
-  const isChromium = !!((window as unknown as Record<string, unknown>).chrome);
+  const isChromium = !!(window as unknown as Record<string, unknown>).chrome;
   const isMac = ua.includes("Macintosh");
   const isLinux = ua.includes("Linux");
 
@@ -437,7 +439,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const cfg = loadConfig();
 
   // Build insight tabs from config
-  const categories = cfg.insightTabs.split(",").map((s) => s.trim()).filter(Boolean);
+  const categories = cfg.insightTabs
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   rebuildDashboardInsightTabs(categories);
 
   $<HTMLSelectElement>("#stt-provider").addEventListener("change", () => {
@@ -469,7 +474,10 @@ document.addEventListener("DOMContentLoaded", () => {
   $<HTMLButtonElement>("#btn-save").addEventListener("click", () => {
     saveSettings();
     // Rebuild insight tabs with new config
-    const newCategories = $<HTMLInputElement>("#insight-tabs").value.split(",").map((s) => s.trim()).filter(Boolean);
+    const newCategories = $<HTMLInputElement>("#insight-tabs")
+      .value.split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
     rebuildDashboardInsightTabs(newCategories);
     $<HTMLDialogElement>("#settings-modal").close();
   });

@@ -48,9 +48,7 @@ const storage = {
     return raw ? (JSON.parse(raw) as Partial<Config>) : {};
   },
   set(data: Partial<Config>): void {
-    const existing = JSON.parse(
-      localStorage.getItem(STORAGE_KEY) || "{}",
-    ) as Partial<Config>;
+    const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") as Partial<Config>;
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...existing, ...data }));
   },
 };

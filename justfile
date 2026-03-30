@@ -12,9 +12,17 @@ build:
 check:
     bun run check
 
+# TypeScript type check
+typecheck:
+    bun run typecheck
+
 # Auto-fix lint/format
 fix:
     bun run fix
+
+# Run all checks (lint, format, types, build)
+verify:
+    bun run check && bun run typecheck && bun run build
 
 # Start local Whisper STT server (CUDA by default, use device=cpu for no GPU)
 whisper model="base" device="cuda":

@@ -1,4 +1,4 @@
-import { registerSTT, type STTProvider } from "./types.ts";
+import { type STTProvider, registerSTT } from "./types.ts";
 
 interface SpeechRecognitionInstance {
   continuous: boolean;

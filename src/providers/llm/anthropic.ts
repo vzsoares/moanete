@@ -1,4 +1,4 @@
-import { registerLLM, type LLMProvider } from "./types.ts";
+import { type LLMProvider, registerLLM } from "./types.ts";
 
 function createAnthropicLLM(): LLMProvider {
   let apiKey = "";

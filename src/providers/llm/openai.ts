@@ -1,4 +1,4 @@
-import { registerLLM, type LLMProvider } from "./types.ts";
+import { type LLMProvider, registerLLM } from "./types.ts";
 
 function createOpenAILLM(): LLMProvider {
   let apiKey = "";
@@ -20,9 +20,7 @@ function createOpenAILLM(): LLMProvider {
 
       const body = {
         model,
-        messages: opts.system
-          ? [{ role: "system", content: opts.system }, ...messages]
-          : messages,
+        messages: opts.system ? [{ role: "system", content: opts.system }, ...messages] : messages,
         max_tokens: opts.maxTokens || 1024,
       };
 

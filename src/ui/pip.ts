@@ -1,3 +1,5 @@
+import { toKey } from "../core/analyzer.ts";
+import type { TranscriptEntry } from "../core/session.ts";
 /**
  * PiP UI — minimal floating overlay.
  *
@@ -5,8 +7,6 @@
  * transcript, insights, or summary. No tabs, no chat, no complex layout.
  */
 import type { ChatMessage } from "../providers/llm/types.ts";
-import type { TranscriptEntry } from "../core/session.ts";
-import { toKey } from "../core/analyzer.ts";
 import PIP_CSS from "./global.css?inline";
 
 let doc: Document | null = null;
@@ -34,7 +34,8 @@ export function buildPipUI(pipDoc: Document, _cssUrl: string, callbacks: PipCall
   doc.head.appendChild(style);
 
   doc.body.setAttribute("data-theme", "dark");
-  doc.body.className = "h-screen flex flex-col overflow-hidden bg-base-200 text-base-content text-sm";
+  doc.body.className =
+    "h-screen flex flex-col overflow-hidden bg-base-200 text-base-content text-sm";
   doc.body.innerHTML = `
     <header class="flex items-center gap-2 px-3 py-1.5 bg-base-300 border-b border-base-content/10 shrink-0">
       <h1 class="text-sm font-semibold text-primary">moanete</h1>

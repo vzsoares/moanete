@@ -1,10 +1,10 @@
-import { AudioCapture, type AudioSource } from "./audio.ts";
-import { Analyzer } from "./analyzer.ts";
-import { createSTT } from "../providers/stt/types.ts";
 import { createLLM } from "../providers/llm/types.ts";
-import { loadConfig } from "./config.ts";
-import type { STTProvider } from "../providers/stt/types.ts";
 import type { LLMProvider } from "../providers/llm/types.ts";
+import { createSTT } from "../providers/stt/types.ts";
+import type { STTProvider } from "../providers/stt/types.ts";
+import { Analyzer } from "./analyzer.ts";
+import { AudioCapture, type AudioSource } from "./audio.ts";
+import { loadConfig } from "./config.ts";
 import type { Config } from "./config.ts";
 
 // Register all providers (side-effect imports)
@@ -61,12 +61,8 @@ export class Session {
           : cfg.llmProvider === "openai"
             ? cfg.openaiModel
             : cfg.anthropicModel,
-      apiKey:
-        cfg.llmProvider === "openai"
-          ? cfg.openaiApiKey
-          : cfg.anthropicApiKey,
-      baseUrl:
-        cfg.llmProvider === "anthropic" ? cfg.anthropicBaseUrl : undefined,
+      apiKey: cfg.llmProvider === "openai" ? cfg.openaiApiKey : cfg.anthropicApiKey,
+      baseUrl: cfg.llmProvider === "anthropic" ? cfg.anthropicBaseUrl : undefined,
     });
 
     // Init analyzer
@@ -100,7 +96,9 @@ export class Session {
         const fallback = this._pickTabSTTProvider(cfg);
         if (fallback) {
           micProvider = fallback;
-          this.onWarning?.("Switched mic STT to " + (fallback === "whisper" ? "Whisper" : "Deepgram") + " — Browser STT picks up tab audio from speakers");
+          this.onWarning?.(
+            `Switched mic STT to ${fallback === "whisper" ? "Whisper" : "Deepgram"} — Browser STT picks up tab audio from speakers`,
+          );
         }
       }
       this._micSTT = createSTT(micProvider);
@@ -146,7 +144,9 @@ export class Session {
       });
 
       if (cfg.captureTab && !this._audio.tabStream) {
-        this.onWarning?.("No audio tracks received — make sure to check 'Share tab audio' in the share picker");
+        this.onWarning?.(
+          "No audio tracks received — make sure to check 'Share tab audio' in the share picker",
+        );
       }
     } catch (e) {
       this.onError?.(`Audio error: ${e instanceof Error ? e.message : String(e)}`);
