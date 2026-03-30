@@ -1,5 +1,12 @@
 import { toKey } from "../core/analyzer.ts";
 import { type Config, loadConfig, saveConfig } from "../core/config.ts";
+import {
+  connectBridge,
+  pushInsights,
+  pushStatus,
+  pushSummary,
+  pushTranscript,
+} from "../core/mcp-bridge.ts";
 import { Session, type TranscriptEntry } from "../core/session.ts";
 import {
   type StoredSession,
@@ -128,11 +135,13 @@ async function startSession(resumed?: boolean): Promise<void> {
   session.onTranscript = (entry: TranscriptEntry) => {
     appendTranscript(entry);
     pipAppendTranscript(entry);
+    pushTranscript(entry.source, entry.text);
   };
 
   session.onInsights = (insights) => {
     updateDashboardInsights(insights);
     pipUpdateInsights(insights);
+    pushInsights(insights);
   };
 
   session.onError = (msg) => {
@@ -163,6 +172,7 @@ async function startSession(resumed?: boolean): Promise<void> {
 
   try {
     await session.start();
+    pushStatus(true);
     setStatus("on", "Listening...");
     $<HTMLButtonElement>("#btn-start").hidden = true;
     $<HTMLButtonElement>("#btn-stop").hidden = false;
@@ -188,6 +198,7 @@ async function startSession(resumed?: boolean): Promise<void> {
 async function stopSession(): Promise<void> {
   await session?.stop();
   session = null;
+  pushStatus(false);
   setStatus("off", "Stopped — session saved");
   $<HTMLButtonElement>("#btn-start").hidden = false;
   $<HTMLButtonElement>("#btn-stop").hidden = true;
@@ -320,6 +331,7 @@ function setupSummary(): void {
       const summary = await summarizeTranscript(session.llm, session.analyzer.transcript);
       el.textContent = summary;
       session.summary = summary;
+      pushSummary(summary);
     } catch (e) {
       el.textContent = `Error: ${e instanceof Error ? e.message : String(e)}`;
     }
@@ -600,6 +612,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupInsightTabs();
   setupChat();
   setupSummary();
+  connectBridge();
 
   const cfg = loadConfig();
 

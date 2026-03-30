@@ -20,6 +20,9 @@ Uses Vite + Bun + Biome + Tailwind CSS + DaisyUI + tw-animate-css.
 ├── scripts/
 │   └── whisper-server.py          # Local Whisper STT server (uv run)
 └── src/
+    ├── mcp/
+    │   ├── server.ts              # MCP stdio server (tools + resources)
+    │   └── bridge.ts              # WebSocket bridge (browser → MCP)
     ├── core/
     │   ├── analyzer.ts            # Real-time insight extraction (setInterval)
     │   ├── audio.ts               # Separate mic/tab audio capture streams

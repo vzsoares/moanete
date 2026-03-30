@@ -32,6 +32,10 @@ whisper model="base" device="cuda":
 ollama model="llama3.2":
     ollama serve & sleep 1 && ollama pull {{model}}
 
+# Start MCP server (stdio + WebSocket bridge on :3001)
+mcp:
+    bun src/mcp/server.ts
+
 # Start everything for local dev (whisper + vite)
 up:
     just whisper & just dev

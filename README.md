@@ -121,6 +121,30 @@ bun run fix           # biome auto-fix
         └── pip.ts                 # Minimal PiP floating overlay
 ```
 
+## MCP Integration
+
+moanete exposes a Model Context Protocol (MCP) server so AI assistants like Claude Code can query the live meeting:
+
+```sh
+just mcp   # start MCP server (stdio + ws://localhost:3001)
+```
+
+Add to your Claude Code config (`.claude/settings.json`):
+```json
+{
+  "mcpServers": {
+    "moanete": {
+      "command": "bun",
+      "args": ["src/mcp/server.ts"],
+      "cwd": "/path/to/moanete"
+    }
+  }
+}
+```
+
+**Tools:** `get_transcript`, `get_insights`, `get_summary`, `ask_question`
+**Resources:** `moanete://transcript`, `moanete://insights`, `moanete://status`
+
 ## Requirements
 
 - [Bun](https://bun.sh) (for building)

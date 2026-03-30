@@ -126,13 +126,15 @@
 
 ## Phase 4: MCP Integration
 
-### MCP server
-- [ ] Implement moanete as an MCP server
-- [ ] Expose tools: `get_transcript`, `get_insights`, `get_summary`, `ask_question`
-- [ ] Expose resources: live transcript, current insights, session history
-- [ ] Allow AI assistants (Claude Code, etc.) to query the meeting in real-time
+### MCP server (done)
+- [x] Implement moanete as an MCP server (`src/mcp/server.ts`)
+- [x] WebSocket bridge (`src/mcp/bridge.ts`) — browser pushes state, MCP server reads it
+- [x] Browser-side bridge client (`src/core/mcp-bridge.ts`) — auto-connects, pushes transcript/insights/summary/status
+- [x] Tools: `get_transcript`, `get_insights`, `get_summary`, `ask_question`
+- [x] Resources: `moanete://transcript`, `moanete://insights`, `moanete://status`
+- [x] `just mcp` command to start the server
 
-### MCP client
+### MCP client (future)
 - [ ] Allow moanete to connect to external MCP servers for extended context
 - [ ] Example: connect to a calendar MCP to show meeting agenda alongside insights
 - [ ] Example: connect to a notes MCP to auto-save action items
