@@ -40,10 +40,16 @@ export class AudioCapture {
       if (opts.tabStream) {
         this._tabStream = opts.tabStream;
       } else {
+        // video: true is required to trigger the share picker
+        // we only use the audio track and discard video
         this._tabStream = await navigator.mediaDevices.getDisplayMedia({
-          video: false,
+          video: true,
           audio: true,
-        } as DisplayMediaStreamOptions);
+        });
+        // Stop the video track immediately — we don't need it
+        for (const track of this._tabStream.getVideoTracks()) {
+          track.stop();
+        }
       }
       sources.push(this._ctx.createMediaStreamSource(this._tabStream));
     }
