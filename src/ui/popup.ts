@@ -83,6 +83,7 @@ function loadSettings(): void {
   $<HTMLInputElement>("#insight-tabs").value = cfg.insightTabs;
   $<HTMLInputElement>("#capture-mic").checked = cfg.captureMic;
   $<HTMLInputElement>("#capture-tab").checked = cfg.captureTab;
+  $<HTMLInputElement>("#multi-agent").checked = cfg.multiAgent;
   renderKeyFields(cfg.sttProvider, cfg.llmProvider, cfg);
 }
 
@@ -94,6 +95,7 @@ function saveSettings(): void {
     insightTabs: $<HTMLInputElement>("#insight-tabs").value,
     captureMic: $<HTMLInputElement>("#capture-mic").checked,
     captureTab: $<HTMLInputElement>("#capture-tab").checked,
+    multiAgent: $<HTMLInputElement>("#multi-agent").checked,
   };
 
   for (const input of document.querySelectorAll<HTMLInputElement>("#key-fields input")) {

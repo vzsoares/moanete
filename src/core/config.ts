@@ -14,6 +14,8 @@ export interface Config {
   sttLanguage: string;
   insightTabs: string;
   analysisIntervalMs: number;
+  multiAgent: boolean;
+  agentPrompts: string;
   captureMic: boolean;
   captureTab: boolean;
   theme: string;
@@ -35,6 +37,8 @@ export const DEFAULTS: Config = {
   sttLanguage: "en-US",
   insightTabs: "Suggestions,Key Points,Action Items,Questions",
   analysisIntervalMs: 15000,
+  multiAgent: true,
+  agentPrompts: "",
   captureMic: true,
   captureTab: false,
   theme: "dark",

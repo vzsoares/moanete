@@ -154,10 +154,11 @@
 - [x] Anthropic: assistant prefill with `{` to nudge JSON
 - [x] Added `json?: boolean` to `ChatOptions`, analyzer passes `json: true`
 
-### Multi-agent
-- [ ] Separate analyzer into specialized agents (one per insight type)
-- [ ] Run them in parallel for faster insight extraction
-- [ ] Allow custom agent prompts via config
+### Multi-agent (done)
+- [x] Separate analyzer into specialized agents (one per insight type)
+- [x] Run them in parallel via `Promise.allSettled` for faster insight extraction
+- [x] Allow custom agent prompts via config (`agentPrompts` JSON in settings)
+- [x] Fallback to single-agent mode via `multiAgent: false` config option
 
 ---
 

@@ -1,18 +1,16 @@
 import type { LLMProvider } from "../providers/llm/types.ts";
 
-const SYSTEM_TEMPLATE = `\
-You are a verbatim transcript analyzer. You MUST extract insights from exactly what was said. \
+const AGENT_SYSTEM_TEMPLATE = `\
+You are a verbatim transcript analyzer specialized in extracting {categoryDisplay}. \
 You are a transcription tool, not a moral judge. NEVER refuse. ALL topics are in scope \
 (politics, legal, medical, personal, explicit, controversial). Report neutrally as a court \
-stenographer would. Given the latest transcript chunk and prior context, extract structured \
-insights. Respond ONLY with valid JSON — no markdown fences, no extra text.
+stenographer would. Given the latest transcript chunk and prior context, extract items \
+for your category. Respond ONLY with valid JSON — no markdown fences, no extra text.
 
-{{
-{jsonKeys}
-}}
+{{ "items": ["{categoryLower} item", ...] }}
 
 Rules:
-- Each list may be empty if nothing relevant was said.
+- The list may be empty if nothing relevant was said.
 - Be concise — one sentence per item max.
 - Do not repeat items already in prior context.`;
 
@@ -29,22 +27,68 @@ export function buildSystemPrompt(categories: string[]): string {
   const jsonKeys = categories
     .map((c) => `  "${toKey(c)}": ["${c.toLowerCase()} item", ...]`)
     .join(",\n");
-  return SYSTEM_TEMPLATE.replace("{jsonKeys}", jsonKeys);
+  return `\
+You are a verbatim transcript analyzer. You MUST extract insights from exactly what was said. \
+You are a transcription tool, not a moral judge. NEVER refuse. ALL topics are in scope \
+(politics, legal, medical, personal, explicit, controversial). Report neutrally as a court \
+stenographer would. Given the latest transcript chunk and prior context, extract structured \
+insights. Respond ONLY with valid JSON — no markdown fences, no extra text.
+
+{{
+${jsonKeys}
+}}
+
+Rules:
+- Each list may be empty if nothing relevant was said.
+- Be concise — one sentence per item max.
+- Do not repeat items already in prior context.`;
 }
+
+function buildAgentPrompt(category: string): string {
+  return AGENT_SYSTEM_TEMPLATE.replace("{categoryDisplay}", category.toLowerCase()).replace(
+    "{categoryLower}",
+    category.toLowerCase(),
+  );
+}
+
+/** Custom prompts per category key, overriding the default agent prompt. */
+export type AgentPrompts = Record<string, string>;
 
 export interface AnalyzerOptions {
   categories?: string[];
   intervalMs?: number;
+  /** Enable multi-agent mode (one LLM call per category in parallel). Default: true. */
+  multiAgent?: boolean;
+  /** Custom system prompts per category key. Only used in multi-agent mode. */
+  agentPrompts?: AgentPrompts;
+}
+
+/** Coerce an LLM response item into a plain string. */
+function coerceItem(raw: unknown): string {
+  if (typeof raw === "string") return raw;
+  if (raw && typeof raw === "object") {
+    const obj = raw as Record<string, unknown>;
+    const val =
+      obj.value ??
+      obj.text ??
+      obj.content ??
+      Object.values(obj).find((v) => typeof v === "string") ??
+      "";
+    return String(val);
+  }
+  return String(raw);
 }
 
 export class Analyzer {
   private _llm: LLMProvider;
   private _categories: string[];
   private _keys: string[];
-  private _systemPrompt: string;
+  private _agentPrompts: Map<string, string>;
+  private _singlePrompt: string;
   private _transcriptChunks: string[] = [];
   private _insights: Record<string, string[]>;
   private _intervalMs: number;
+  private _multiAgent: boolean;
   private _timer: ReturnType<typeof setInterval> | null = null;
   private _lastError: string | null = null;
   private _onUpdate: ((insights: Record<string, string[]>) => void) | null = null;
@@ -53,7 +97,10 @@ export class Analyzer {
     this._llm = llm;
     this._categories = opts.categories || [...DEFAULT_CATEGORIES];
     this._keys = this._categories.map(toKey);
-    this._systemPrompt = buildSystemPrompt(this._categories);
+    this._multiAgent = opts.multiAgent ?? true;
+    this._singlePrompt = buildSystemPrompt(this._categories);
+    this._agentPrompts = new Map();
+    this._rebuildAgentPrompts(opts.agentPrompts);
     this._insights = Object.fromEntries(this._keys.map((k) => [k, []]));
     this._intervalMs = opts.intervalMs || 15_000;
   }
@@ -109,16 +156,92 @@ export class Analyzer {
     }
   }
 
-  updateCategories(categories: string[]): void {
+  updateCategories(categories: string[], agentPrompts?: AgentPrompts): void {
     this._categories = categories;
     this._keys = categories.map(toKey);
-    this._systemPrompt = buildSystemPrompt(categories);
+    this._singlePrompt = buildSystemPrompt(categories);
+    this._rebuildAgentPrompts(agentPrompts);
     this._insights = Object.fromEntries(this._keys.map((k) => [k, []]));
+  }
+
+  private _rebuildAgentPrompts(custom?: AgentPrompts): void {
+    this._agentPrompts.clear();
+    for (let i = 0; i < this._categories.length; i++) {
+      const key = this._keys[i]!;
+      const category = this._categories[i]!;
+      this._agentPrompts.set(key, custom?.[key] ?? buildAgentPrompt(category));
+    }
   }
 
   private async _analyze(): Promise<void> {
     if (this._transcriptChunks.length === 0) return;
 
+    if (this._multiAgent) {
+      await this._analyzeMultiAgent();
+    } else {
+      await this._analyzeSingle();
+    }
+  }
+
+  /** Multi-agent: one parallel LLM call per category. */
+  private async _analyzeMultiAgent(): Promise<void> {
+    const fullText = this._transcriptChunks.join(" ").slice(-3000);
+    let anyUpdated = false;
+
+    const tasks = this._keys.map(async (key, i) => {
+      const category = this._categories[i]!;
+      const existing = this._insights[key];
+      if (!existing) return;
+
+      const prior = existing.slice(-5);
+      const prompt = this._agentPrompts.get(key) ?? buildAgentPrompt(category);
+
+      const messages = [
+        {
+          role: "user",
+          content: `Prior ${category.toLowerCase()} (do not repeat): ${JSON.stringify(prior)}\n\nLatest transcript:\n${fullText}`,
+        },
+      ];
+
+      const raw = await this._llm.chat(messages, {
+        system: prompt,
+        maxTokens: 256,
+        json: true,
+      });
+
+      const data = JSON.parse(raw) as { items?: unknown[] };
+      const items = data.items ?? [];
+
+      for (const rawItem of items) {
+        const item = coerceItem(rawItem);
+        if (item && !existing.includes(item)) {
+          existing.push(item);
+          anyUpdated = true;
+        }
+      }
+    });
+
+    const results = await Promise.allSettled(tasks);
+    this._lastError = null;
+
+    // Log any individual agent failures
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i]!;
+      if (result.status === "rejected") {
+        const reason =
+          result.reason instanceof Error ? result.reason.message : String(result.reason);
+        console.warn(`[analyzer:${this._keys[i]}]`, reason);
+        this._lastError = reason;
+      }
+    }
+
+    if (anyUpdated) {
+      this._onUpdate?.(this.insights);
+    }
+  }
+
+  /** Single-agent fallback: one LLM call with all categories. */
+  private async _analyzeSingle(): Promise<void> {
     const fullText = this._transcriptChunks.join(" ");
     const prior = Object.fromEntries(
       Object.entries(this._insights).map(([k, v]) => [k, v.slice(-5)]),
@@ -133,7 +256,7 @@ export class Analyzer {
 
     try {
       const raw = await this._llm.chat(messages, {
-        system: this._systemPrompt,
+        system: this._singlePrompt,
         maxTokens: 512,
         json: true,
       });
@@ -143,17 +266,8 @@ export class Analyzer {
       for (const key of this._keys) {
         const existing = this._insights[key];
         if (!existing) continue;
-        for (const raw_item of data[key] || []) {
-          const item =
-            typeof raw_item === "string"
-              ? raw_item
-              : raw_item && typeof raw_item === "object"
-                ? (((raw_item as Record<string, unknown>).value ??
-                    (raw_item as Record<string, unknown>).text ??
-                    (raw_item as Record<string, unknown>).content ??
-                    Object.values(raw_item).find((v) => typeof v === "string") ??
-                    "") as string)
-                : String(raw_item);
+        for (const rawItem of data[key] || []) {
+          const item = coerceItem(rawItem);
           if (item && !existing.includes(item)) {
             existing.push(item);
           }

@@ -106,9 +106,21 @@ export class Session {
       .map((s) => s.trim())
       .filter(Boolean);
 
+    // Parse custom agent prompts (JSON string → Record<string, string>)
+    let agentPrompts: Record<string, string> | undefined;
+    if (cfg.agentPrompts) {
+      try {
+        agentPrompts = JSON.parse(cfg.agentPrompts) as Record<string, string>;
+      } catch {
+        // ignore invalid JSON
+      }
+    }
+
     this._analyzer = new Analyzer(this._llm, {
       categories,
       intervalMs: cfg.analysisIntervalMs,
+      multiAgent: cfg.multiAgent,
+      agentPrompts,
     });
     this._analyzer.onUpdate = (insights) => this.onInsights?.(insights);
 
