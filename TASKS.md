@@ -51,39 +51,48 @@
 
 ---
 
-## Phase 2: Chrome Extension — Core
+## Phase 2: Web App — Core
 
 ### Scaffold (done)
-- [x] Flatten repo — remove Python TUI, move web extension to root
-- [x] Project structure with Vite + Bun + Biome
-- [x] Chrome Extension Manifest V3
+- [x] Flatten repo — remove Python TUI, move to root
+- [x] Project structure with Vite + Bun + Biome + TypeScript
 - [x] Pluggable provider registry pattern (STT + LLM)
 - [x] STT providers: Browser SpeechRecognition (free), Deepgram (paid)
 - [x] LLM providers: Ollama (local/free), OpenAI, Anthropic
-- [x] Core engine ports: Analyzer, Summarizer, Audio capture, Config, Session orchestrator
-- [x] Popup UI: settings, session control, PiP launch
-- [x] PiP overlay UI: live transcript, tabbed insights, chat, summary
-- [x] Catppuccin-mocha theme for all UI
+- [x] Core engine: Analyzer, Summarizer, Audio capture, Config, Session orchestrator
+- [x] Configurable STT language dropdown (20 languages, BCP 47 tags)
+- [x] Inline PiP CSS
 
-### Make it runnable
-- [x] Add Vite config for extension bundling (`vite-plugin-web-extension`)
-- [x] Add extension icons (16/48/128px)
-- [x] Convert entire codebase to TypeScript (strict mode)
-- [x] Fix build output — relative paths, pip.ts bundled separately, pip.css as web-accessible resource
-- [x] PiP assets (pip.js + pip.css) in `web_accessible_resources` and built into dist
-- [ ] Test loading as unpacked extension in Chrome
-- [ ] Test Browser SpeechRecognition STT (free tier)
+### Convert extension → plain web app
+- [ ] Remove extension scaffolding (manifest.json, background.ts, chrome.* APIs, vite-plugin-web-extension)
+- [ ] Replace `chrome.storage` with `localStorage` / IndexedDB in config.ts
+- [ ] Single `index.html` entry point — full-page app (not a popup)
+- [ ] Plain Vite SPA build (`bun run dev` → `http://localhost:5173`)
+
+### Fix broken features
+- [ ] **Fix PiP** — debug with Playwright MCP, ensure Document PiP API works from regular web page
+- [ ] **Fix PC audio capture** — `getDisplayMedia` not prompting for screen share; needs user gesture
+- [ ] Test Browser SpeechRecognition STT end-to-end
 - [ ] Test Deepgram WebSocket STT
-- [ ] Test Document PiP window lifecycle (open, close, reconnect)
-- [ ] Test tab audio capture via `getDisplayMedia`
-- [ ] Wire `tabCapture` in background service worker for cleaner audio capture
 
-### Polish
-- [ ] Config modal in PiP (preset switching, language)
-- [ ] Keyboard shortcuts in PiP
-- [ ] Screen capture via `getDisplayMedia` + vision LLM
-- [ ] Session export (markdown download)
-- [ ] Error toasts / status indicators in PiP
+### Redesign UI
+- [ ] **Full web app UI** — proper dashboard, not a tiny popup
+- [ ] Dashboard view: live transcript, insights, chat, summary all visible
+- [ ] Settings page with provider config, language, presets
+- [ ] Session history browser
+- [ ] **Simplify PiP overlay** — minimal floating widget:
+  - Two status indicators: mic active (green dot) + PC audio active (green dot)
+  - One main content area showing the current result (transcript, insights, or summary)
+  - Simple selector/toggle to switch what the main area shows
+  - No tabs, no chat input, no complex layout — just a clean floating readout
+
+### Playwright testing
+- [ ] Add Playwright as dev dependency
+- [ ] Use Playwright MCP to interactively debug PiP and audio issues
+- [ ] Write e2e test: open app → start session → verify transcript appears
+- [ ] Write e2e test: open PiP → verify overlay renders with status indicators
+- [ ] Write e2e test: settings persist across reload
+- [ ] Add `bun run test` script
 
 ---
 
