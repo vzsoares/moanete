@@ -71,9 +71,21 @@
 
 ### Fix broken features
 - [ ] **Fix PiP** — debug with Playwright MCP, ensure Document PiP API works from regular web page
-- [ ] **Fix PC audio capture** — `getDisplayMedia` not prompting for screen share; needs user gesture
+- [x] **Fix PC audio capture** — was using `video: false` which skips the share picker; now uses `video: true` and discards the video track
 - [ ] Test Browser SpeechRecognition STT end-to-end
 - [ ] Test Deepgram WebSocket STT
+
+### Browser + OS audio compatibility research
+- [ ] Research `getDisplayMedia` audio support per browser per OS:
+  - Windows: Chrome/Edge/Firefox system audio on screen share?
+  - Linux: Firefox + PipeWire system audio? Chrome tab-only?
+  - macOS: any browser with system audio? (likely tab-only everywhere)
+- [ ] Research `SpeechRecognition` support: Chrome yes, Firefox behind flag, Safari partial
+- [ ] Research Document PiP support: Chromium-only? Firefox alternative?
+- [ ] Add browser detection — show hint when current browser has limitations
+  - e.g. "For system audio on Linux, use Firefox" when Chrome + Linux detected
+  - e.g. "PiP not available in this browser" when Firefox detected
+- [ ] Document findings in SPEC.md compatibility section
 
 ### Redesign UI
 - [ ] **Full web app UI** — proper dashboard, not a tiny popup
