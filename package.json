@@ -8,7 +8,10 @@
     "./providers": "./src/providers/index.ts",
     "./providers/llm": "./src/providers/llm/types.ts",
     "./providers/stt": "./src/providers/stt/types.ts",
-    "./mcp": "./src/mcp/index.ts"
+    "./mcp": "./src/mcp/index.ts",
+    "./ui": "./src/ui/index.ts",
+    "./ui/base": "./src/ui/base.ts",
+    "./ui/util": "./src/ui/util.ts"
   },
   "scripts": {
     "dev": "vite",

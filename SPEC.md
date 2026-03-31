@@ -272,7 +272,44 @@ moanete can connect to external MCP servers for extended context (e.g. Notion, c
 
 ---
 
-## 13. CI/CD
+## 13. Web Components & Package
+
+The UI is built as reusable custom elements (light DOM, no shadow DOM — inherits Tailwind/DaisyUI styles from host page).
+
+### Components
+| Tag | Purpose |
+|---|---|
+| `<mn-status>` | Status dot + text |
+| `<mn-audio-level>` | Mic/Tab audio level indicator |
+| `<mn-compat-hints>` | Browser compatibility warnings |
+| `<mn-transcript>` | Scrollable transcript display |
+| `<mn-chat>` | Chat messages + input |
+| `<mn-summary>` | Summary footer with generate button |
+| `<mn-insights>` | Tabbed insight categories with cards |
+| `<mn-settings>` | Full settings dialog |
+| `<mn-history>` | Session history list/detail/resume/export |
+| `<mn-mcp>` | MCP servers connect/manage/tools |
+| `<mn-dashboard>` | Full app orchestrator — composes all above |
+
+### Package exports
+```
+moanete/core       — Session, Analyzer, Config, Storage, MCP bridge client
+moanete/providers  — STT + LLM provider registries and all built-in providers
+moanete/mcp        — MCP server, client, bridge (Bun-only)
+moanete/ui         — All custom elements + base class + utilities
+```
+
+### Hosted version integration
+```ts
+import "moanete/ui";
+const dashboard = document.querySelector<MnDashboard>("mn-dashboard")!;
+dashboard.beforeSessionStart = async () => await checkSubscription();
+dashboard.onSessionEnd = (session) => saveToServer(session);
+```
+
+---
+
+## 14. CI/CD
 
 GitHub Actions workflow (`.github/workflows/ci.yml`):
 - Runs on push to `main` and pull requests

@@ -195,6 +195,19 @@ export function mcpConnect(
   return request("mcp-connect", params);
 }
 
+export interface McpConnectRemoteParams {
+  name: string;
+  url: string;
+  oauthClientId?: string;
+  oauthClientSecret?: string;
+}
+
+export function mcpConnectRemote(
+  params: McpConnectRemoteParams,
+): Promise<{ connected: boolean; name: string }> {
+  return request("mcp-connect-remote", params);
+}
+
 export function mcpDisconnect(name: string): Promise<{ disconnected: boolean; name: string }> {
   return request("mcp-disconnect", { name });
 }

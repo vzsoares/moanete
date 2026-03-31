@@ -5,6 +5,7 @@ export {
   connectAll,
   disconnectAll,
   connectOne,
+  connectRemote,
   disconnectOne,
   listConnected,
   listTools,
@@ -12,4 +13,9 @@ export {
   listResources,
   readResource,
 } from "./client.ts";
-export type { McpServerConfig, ToolCallResult, ResourceReadResult } from "./client.ts";
+export type {
+  McpServerConfig,
+  McpRemoteConfig,
+  ToolCallResult,
+  ResourceReadResult,
+} from "./client.ts";

@@ -109,6 +109,22 @@ async function handleMcpRequest(ws: ServerWebSocket, msg: BridgeMessage): Promis
         break;
       }
 
+      case "mcp-connect-remote": {
+        const d = msg.data as {
+          name: string;
+          url: string;
+          oauthClientId?: string;
+          oauthClientSecret?: string;
+        };
+        await mcpClient.connectRemote(d.name, {
+          url: d.url,
+          oauthClientId: d.oauthClientId,
+          oauthClientSecret: d.oauthClientSecret,
+        });
+        result = { connected: true, name: d.name };
+        break;
+      }
+
       case "mcp-disconnect": {
         const d = msg.data as { name: string };
         await mcpClient.disconnectOne(d.name);

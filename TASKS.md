@@ -171,7 +171,21 @@
 
 ---
 
-## Phase 7: Hosted Version
+## Phase 7: Web Components & Package
+
+- [x] `MoaneteElement` base class (light DOM, no shadow DOM)
+- [x] Leaf components: `mn-status`, `mn-audio-level`, `mn-compat-hints`, `mn-transcript`, `mn-chat`, `mn-summary`
+- [x] Composite components: `mn-insights`, `mn-settings`, `mn-history`, `mn-mcp`
+- [x] `mn-dashboard` orchestrator — full app in a single custom element
+- [x] `index.html` simplified to `<mn-dashboard></mn-dashboard>`
+- [x] Package exports: `moanete/core`, `moanete/providers`, `moanete/mcp`, `moanete/ui`
+- [x] Hooks for hosted version: `beforeSessionStart`, `onSessionEnd`
+- [x] All config fields exposed in settings UI (audio, STT, LLM, analysis)
+- [ ] PiP refactor to reuse web components
+
+---
+
+## Phase 8: Hosted Version
 
 - [ ] Backend proxy for Anthropic/OpenAI API calls (CORS)
 - [ ] Auth + user accounts
