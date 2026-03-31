@@ -12,9 +12,10 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    host: process.env.VITE_HOST || "localhost",
     proxy: {
       "/whisper": {
-        target: "http://localhost:8000",
+        target: `http://${process.env.WHISPER_HOST || "localhost"}:8000`,
         rewrite: (path) => path.replace(/^\/whisper/, ""),
       },
     },

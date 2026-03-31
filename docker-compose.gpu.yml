@@ -1,0 +1,24 @@
+# GPU override — use with: docker compose -f docker-compose.yml -f docker-compose.gpu.yml up
+services:
+  whisper:
+    image: fedirz/faster-whisper-server:latest-cuda
+    environment:
+      - WHISPER__MODEL=Systran/faster-whisper-base
+      - WHISPER__INFERENCE_DEVICE=cuda
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  ollama:
+    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 3 && ollama pull llama3.2 && wait"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

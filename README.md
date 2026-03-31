@@ -27,7 +27,47 @@ web app (settings + start)
 3. Click "Pop Out (PiP)" → floating overlay appears on top of your meeting
 4. The overlay shows live transcript, insights, chat, and summary
 
-## Setup
+## Quick Start (Docker)
+
+One command to get everything running — web app, local STT (Whisper), and local LLM (Ollama):
+
+```sh
+docker compose up --build
+```
+
+Open **http://localhost:5173** in Chrome. That's it.
+
+Ollama auto-pulls `llama3.2` on first start. Whisper uses the `base` model by default. Both are CPU-only in this mode.
+
+### With NVIDIA GPU
+
+For faster transcription and inference:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
+```
+
+Requires [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html). Uses CUDA for both Whisper and Ollama.
+
+### What's included
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| Web app | http://localhost:5173 | moanete dashboard |
+| Whisper | http://localhost:8000 | Local STT (faster-whisper) |
+| Ollama | http://localhost:11434 | Local LLM (llama3.2) |
+| MCP bridge | ws://localhost:3001 | Optional — for AI assistant integration |
+
+### Useful commands
+
+```sh
+docker compose up -d              # run in background
+docker compose logs -f app        # follow app logs
+docker compose down                # stop everything
+docker compose down -v             # stop and delete model cache
+```
+
+## Setup (manual)
 
 Requires [Bun](https://bun.sh) and Chrome 116+.
 
