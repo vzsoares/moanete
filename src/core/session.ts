@@ -29,6 +29,31 @@ function isSimilar(a: string, b: string, threshold = 0.7): boolean {
   return (2 * intersection) / (setA.size + setB.size) >= threshold;
 }
 
+/**
+ * Detect Whisper-style hallucinated loops — e.g. "o que é o que é o que é ...".
+ * Splits text into words and checks if a short n-gram repeats excessively.
+ */
+function isRepetitiveLoop(text: string, maxRepeatRatio = 0.5): boolean {
+  const words = text.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length < 6) return false;
+
+  // Try n-gram sizes 1–4
+  for (let n = 1; n <= Math.min(4, Math.floor(words.length / 3)); n++) {
+    const counts = new Map<string, number>();
+    for (let i = 0; i <= words.length - n; i++) {
+      const gram = words.slice(i, i + n).join(" ");
+      counts.set(gram, (counts.get(gram) ?? 0) + 1);
+    }
+    for (const count of counts.values()) {
+      // If a single n-gram covers most of the text, it's a loop
+      if (count * n >= words.length * maxRepeatRatio && count >= 4) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 // Register all providers (side-effect imports)
 import "../providers/stt/browser.ts";
 import "../providers/stt/deepgram.ts";
@@ -290,6 +315,7 @@ export class Session {
       this._micSTT = createSTT(micProvider);
       this._micSTT.configure(sttConfig);
       this._micSTT.start((text) => {
+        if (isRepetitiveLoop(text)) return;
         this._analyzer!.feed(`[You] ${text}`);
         this._transcriptLines.push({ source: "mic", text, timestamp: Date.now() });
         this.onTranscript?.({ source: "mic", text });
@@ -309,6 +335,7 @@ export class Session {
         this._tabSTT = createSTT(tabProvider);
         this._tabSTT.configure(sttConfig);
         this._tabSTT.start((text) => {
+          if (isRepetitiveLoop(text)) return;
           this._analyzer!.feed(`[Them] ${text}`);
           this._transcriptLines.push({ source: "tab", text, timestamp: Date.now() });
           this.onTranscript?.({ source: "tab", text });
