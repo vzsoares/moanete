@@ -75,7 +75,10 @@ export class MnHistory extends MoaneteElement {
       card.innerHTML = `
         <div class="flex justify-between items-center mb-1">
           <span class="text-xs font-semibold">${date}</span>
-          <span class="badge badge-sm badge-ghost">${dur}</span>
+          <div class="flex gap-1">
+            ${s.screenCaptures?.length ? `<span class="badge badge-sm badge-ghost">${s.screenCaptures.length} captures</span>` : ""}
+            <span class="badge badge-sm badge-ghost">${dur}</span>
+          </div>
         </div>
         <p class="text-xs text-base-content/60 truncate">${escapeHtml(preview)}</p>
         <div class="flex gap-1 mt-2">

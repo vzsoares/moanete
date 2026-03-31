@@ -119,6 +119,12 @@ export class Session {
     return this._screenTimer !== null;
   }
 
+  /** Add a screen capture from an external source (e.g. manual capture). */
+  addScreenCapture(capture: ScreenCapture): void {
+    this._screenCaptures.push(capture);
+    this._analyzer?.feedScreenContext(capture.description);
+  }
+
   /** Capture a frame from the active screen share */
   async captureFrame(maxWidth = 1024): Promise<string> {
     if (!this._audio) throw new Error("No active audio capture");
@@ -267,6 +273,7 @@ export class Session {
       intervalMs: cfg.analysisIntervalMs,
       multiAgent: cfg.multiAgent,
       agentPrompts,
+      language: cfg.sttLanguage,
     });
     this._analyzer.onUpdate = (insights) => this.onInsights?.(insights);
 

@@ -14,6 +14,7 @@ RULES:
 - Do NOT repeat items from prior context.
 - The list may be empty if nothing new is relevant.
 - One sentence per item, max two if needed for clarity.
+- ALWAYS write items in {language}.
 
 Response format:
 {{ "items": ["{categoryLower} item", ...] }}`;
@@ -31,6 +32,7 @@ RULES:
 - Do NOT repeat items from prior context.
 - Each list may be empty if nothing new is relevant.
 - One sentence per item, max two if needed for clarity.
+- ALWAYS write items in {language}.
 
 Response format:
 {{
@@ -46,18 +48,31 @@ export function toKey(name: string): string {
     .replace(/^_|_$/g, "");
 }
 
-export function buildSystemPrompt(categories: string[]): string {
+/** Map BCP-47 language codes to human-readable names for prompts. */
+function languageLabel(code: string): string {
+  try {
+    const name = new Intl.DisplayNames(["en"], { type: "language" }).of(code.split("-")[0]!);
+    if (name) return name;
+  } catch {
+    // fall through
+  }
+  return code;
+}
+
+export function buildSystemPrompt(categories: string[], language = "en"): string {
   const jsonSchema = categories
     .map((c) => `  "${toKey(c)}": ["${c.toLowerCase()} item", ...]`)
     .join(",\n");
-  return SINGLE_AGENT_TEMPLATE.replace("{jsonSchema}", jsonSchema);
+  return SINGLE_AGENT_TEMPLATE.replace("{jsonSchema}", jsonSchema).replace(
+    "{language}",
+    languageLabel(language),
+  );
 }
 
-function buildAgentPrompt(category: string): string {
-  return AGENT_SYSTEM_TEMPLATE.replace("{categoryDisplay}", category.toLowerCase()).replace(
-    "{categoryLower}",
-    category.toLowerCase(),
-  );
+function buildAgentPrompt(category: string, language = "en"): string {
+  return AGENT_SYSTEM_TEMPLATE.replace("{categoryDisplay}", category.toLowerCase())
+    .replace("{categoryLower}", category.toLowerCase())
+    .replace("{language}", languageLabel(language));
 }
 
 /** Custom prompts per category key, overriding the default agent prompt. */
@@ -70,6 +85,8 @@ export interface AnalyzerOptions {
   multiAgent?: boolean;
   /** Custom system prompts per category key. Only used in multi-agent mode. */
   agentPrompts?: AgentPrompts;
+  /** BCP-47 language code for insight output (e.g. "pt-BR", "en-US"). Default: "en". */
+  language?: string;
 }
 
 /** Coerce an LLM response item into a plain string. */
@@ -118,6 +135,7 @@ export class Analyzer {
   private _insights: Record<string, string[]>;
   private _intervalMs: number;
   private _multiAgent: boolean;
+  private _language: string;
   private _timer: ReturnType<typeof setInterval> | null = null;
   private _lastError: string | null = null;
   private _onUpdate: ((insights: Record<string, string[]>) => void) | null = null;
@@ -130,7 +148,8 @@ export class Analyzer {
     this._categories = opts.categories || [...DEFAULT_CATEGORIES];
     this._keys = this._categories.map(toKey);
     this._multiAgent = opts.multiAgent ?? true;
-    this._singlePrompt = buildSystemPrompt(this._categories);
+    this._language = opts.language ?? "en";
+    this._singlePrompt = buildSystemPrompt(this._categories, this._language);
     this._agentPrompts = new Map();
     this._rebuildAgentPrompts(opts.agentPrompts);
     this._insights = Object.fromEntries(this._keys.map((k) => [k, []]));
@@ -208,7 +227,7 @@ export class Analyzer {
   updateCategories(categories: string[], agentPrompts?: AgentPrompts): void {
     this._categories = categories;
     this._keys = categories.map(toKey);
-    this._singlePrompt = buildSystemPrompt(categories);
+    this._singlePrompt = buildSystemPrompt(categories, this._language);
     this._rebuildAgentPrompts(agentPrompts);
     this._insights = Object.fromEntries(this._keys.map((k) => [k, []]));
   }
@@ -218,7 +237,7 @@ export class Analyzer {
     for (let i = 0; i < this._categories.length; i++) {
       const key = this._keys[i]!;
       const category = this._categories[i]!;
-      this._agentPrompts.set(key, custom?.[key] ?? buildAgentPrompt(category));
+      this._agentPrompts.set(key, custom?.[key] ?? buildAgentPrompt(category, this._language));
     }
   }
 
@@ -344,7 +363,7 @@ export class Analyzer {
       if (!existing) return;
 
       const prior = existing.slice(-MAX_PRIOR_PER_CATEGORY);
-      const prompt = this._agentPrompts.get(key) ?? buildAgentPrompt(category);
+      const prompt = this._agentPrompts.get(key) ?? buildAgentPrompt(category, this._language);
       const priorSection = `${category}: ${JSON.stringify(prior)}`;
 
       const messages = [{ role: "user", content: this._buildUserMessage(priorSection) }];

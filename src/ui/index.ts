@@ -9,6 +9,7 @@ import "./components/mn-insights.ts";
 import "./components/mn-settings.ts";
 import "./components/mn-history.ts";
 import "./components/mn-mcp.ts";
+import "./components/mn-screen-captures.ts";
 import "./components/mn-dashboard.ts";
 
 // Re-export classes for programmatic use
@@ -23,6 +24,7 @@ export { MnInsights } from "./components/mn-insights.ts";
 export { MnSettings } from "./components/mn-settings.ts";
 export { MnHistory } from "./components/mn-history.ts";
 export { MnMcp } from "./components/mn-mcp.ts";
+export { MnScreenCaptures } from "./components/mn-screen-captures.ts";
 export { MnDashboard } from "./components/mn-dashboard.ts";
 
 // Re-export utilities

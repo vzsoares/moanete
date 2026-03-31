@@ -7,7 +7,7 @@ import {
   pushTranscript,
 } from "../../core/mcp-bridge.ts";
 import { Session, type TranscriptEntry } from "../../core/session.ts";
-import type { StoredSession } from "../../core/storage.ts";
+import type { ScreenCapture, StoredSession } from "../../core/storage.ts";
 import { analyzeScreen, answerQuestion, summarizeTranscript } from "../../core/summarizer.ts";
 import type { ChatMessage } from "../../providers/llm/types.ts";
 import { MoaneteElement } from "../base.ts";
@@ -28,6 +28,7 @@ import type { MnCompatHints } from "./mn-compat-hints.ts";
 import type { MnHistory } from "./mn-history.ts";
 import type { MnInsights } from "./mn-insights.ts";
 import type { MnMcp } from "./mn-mcp.ts";
+import type { MnScreenCaptures } from "./mn-screen-captures.ts";
 import type { MnSettings } from "./mn-settings.ts";
 import type { MnStatus } from "./mn-status.ts";
 import type { MnSummary } from "./mn-summary.ts";
@@ -87,6 +88,7 @@ export class MnDashboard extends MoaneteElement {
         <mn-transcript></mn-transcript>
         <aside class="w-96 flex flex-col gap-4 shrink-0">
           <mn-insights></mn-insights>
+          <mn-screen-captures></mn-screen-captures>
           <mn-chat></mn-chat>
         </aside>
       </main>
@@ -234,6 +236,7 @@ export class MnDashboard extends MoaneteElement {
     this.$<HTMLButtonElement>(".btn-screen").hidden = true;
     this.$<HTMLButtonElement>(".btn-auto-screen").hidden = true;
     this.$<HTMLDivElement>(".audio-indicators").hidden = true;
+    this.$<MnScreenCaptures>("mn-screen-captures").clear();
     this._pipWindow?.close();
   }
 
@@ -289,11 +292,11 @@ export class MnDashboard extends MoaneteElement {
       btn.classList.add("btn-ghost");
     } else {
       this._session.onScreenCapture = (capture) => {
-        // Show latest description in status
         this.$<MnStatus>("mn-status").setState(
           "on",
           `Screen: ${capture.description.slice(0, 60)}...`,
         );
+        this.$<MnScreenCaptures>("mn-screen-captures").addCapture(capture);
       };
       this._session.startAutoCapture(5000);
       btn.classList.add("btn-active", "btn-accent");
@@ -312,6 +315,15 @@ export class MnDashboard extends MoaneteElement {
       const transcript = this._session.analyzer?.transcript ?? "";
       const result = await analyzeScreen(this._session.visionLlm, frameBase64, transcript);
       summary.setSummary(result);
+
+      // Store capture and feed to analyzer (same as auto-capture)
+      const capture: ScreenCapture = {
+        timestamp: Date.now(),
+        image: frameBase64,
+        description: result,
+      };
+      this._session.addScreenCapture(capture);
+      this.$<MnScreenCaptures>("mn-screen-captures").addCapture(capture);
     } catch (e) {
       summary.setSummary(`Screen analysis error: ${e instanceof Error ? e.message : String(e)}`);
     }
