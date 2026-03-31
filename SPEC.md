@@ -4,7 +4,7 @@
 
 A browser-based meeting assistant delivered as a plain web app (Vite SPA) with a
 Picture-in-Picture floating overlay. Pluggable STT and LLM providers with a
-BYOK (Bring Your Own Key) free tier and a hosted paid tier.
+BYOK (Bring Your Own Key) model — local providers or external APIs.
 
 Uses Vite + Bun + Biome + Tailwind CSS + DaisyUI + tw-animate-css.
 
@@ -64,12 +64,12 @@ Uses Vite + Bun + Biome + Tailwind CSS + DaisyUI + tw-animate-css.
 
 ---
 
-## 2. Two-tier model
+## 2. Provider model
 
-| Tier | STT | LLM | Infra cost |
-|------|-----|-----|------------|
-| Free (BYOK) | Browser `webkitSpeechRecognition` (free), local Whisper server, or user's Deepgram key | User's own Ollama / OpenAI / Anthropic key | Zero |
-| Hosted (paid) | Proxied Deepgram | Proxied Claude/GPT via backend | Server + API margin |
+| Provider type | STT | LLM | Cost |
+|---------------|-----|-----|------|
+| Local | Browser `webkitSpeechRecognition`, local Whisper server | Ollama | Free |
+| External (BYOK) | Deepgram (user's API key) | OpenAI / Anthropic (user's API key) | Pay-per-use to provider |
 
 ---
 
@@ -245,7 +245,7 @@ The app shows browser-specific hints at startup when limitations are detected.
 - [ ] Settings persist across sessions
 - [ ] Deepgram streaming STT works when API key provided
 - [ ] OpenAI and Anthropic LLM providers work
-- [ ] Free tier runs with zero backend (all API calls from browser)
+- [ ] Runs with zero backend (all API calls from browser)
 
 ---
 

@@ -112,12 +112,12 @@ The app auto-detects Ollama at `localhost:11434`. No config needed.
 
 ## Provider options
 
-| | Free tier | Paid tier |
+| | Local (free) | External (BYOK) |
 |---|---|---|
-| **STT** | Browser SpeechRecognition (free), local Whisper server (free) | Deepgram (BYOK or hosted) |
-| **LLM** | Ollama (local) or BYOK OpenAI/Anthropic | Hosted proxy (subscription) |
+| **STT** | Browser SpeechRecognition, local Whisper server | Deepgram |
+| **LLM** | Ollama | OpenAI, Anthropic |
 
-No backend needed for the free tier — all API calls go directly from the browser.
+No backend needed — all API calls go directly from the browser.
 
 For local STT via Whisper (needed for tab/system audio transcription):
 
@@ -256,7 +256,7 @@ The app detects your browser and shows hints when features are limited.
 
 ## Privacy
 
-### Free tier with Ollama
+### With local providers (Ollama + Browser STT)
 - **Audio** — captured by browser, transcribed locally via SpeechRecognition or sent to your own STT provider
 - **Transcripts** — sent only to your configured LLM provider (Ollama = local)
 - **API keys** — stored locally in `localStorage`, never sent to us
