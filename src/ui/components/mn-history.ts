@@ -153,6 +153,17 @@ export class MnHistory extends MoaneteElement {
       }
     }
 
+    if (s.chatMessages && s.chatMessages.length > 0) {
+      html += '<h5 class="text-xs font-semibold text-primary mb-1">Chat</h5>';
+      html += '<div class="mb-4 flex flex-col gap-1">';
+      for (const msg of s.chatMessages) {
+        const label = msg.role === "user" ? "You" : "moanete";
+        const color = msg.role === "user" ? "text-info" : "text-success";
+        html += `<div class="text-xs"><span class="${color} font-semibold">${label}:</span> ${escapeHtml(msg.text)}</div>`;
+      }
+      html += "</div>";
+    }
+
     if (s.screenCaptures && s.screenCaptures.length > 0) {
       html += '<h5 class="text-xs font-semibold text-primary mb-1">Screen Captures</h5>';
       html += '<div class="flex flex-col gap-2 mb-3">';

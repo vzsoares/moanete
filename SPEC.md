@@ -153,6 +153,7 @@ Pluggable registry pattern — providers register via side-effect imports:
 - Screen capture analysis — captures a frame from the active screen share video track, sends to a vision-capable LLM with transcript context
 - Auto-capture mode — captures screen every 5 seconds, generates descriptions, feeds them into analyzer context so insights reflect what's on screen
 - Screen captures (image + description + timestamp) are saved to session history in IndexedDB
+- Chat messages (role + text + timestamp) are persisted to session history and included in markdown exports
 - All LLM providers support multi-modal messages (text + image) for vision analysis
 - Same "court stenographer" system prompts
 

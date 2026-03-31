@@ -10,6 +10,12 @@ export interface ScreenCapture {
   description: string;
 }
 
+export interface StoredChatMessage {
+  role: "user" | "assistant";
+  text: string;
+  timestamp: number;
+}
+
 export interface StoredSession {
   id: string;
   startedAt: number;
@@ -20,6 +26,7 @@ export interface StoredSession {
   summary: string;
   categories: string[];
   screenCaptures?: ScreenCapture[];
+  chatMessages?: StoredChatMessage[];
 }
 
 export interface TranscriptLine {
@@ -123,6 +130,15 @@ export function exportSessionMarkdown(s: StoredSession): string {
       for (const item of items) {
         lines.push(`- ${item}`);
       }
+    }
+    lines.push("");
+  }
+
+  if (s.chatMessages && s.chatMessages.length > 0) {
+    lines.push("## Chat", "");
+    for (const msg of s.chatMessages) {
+      const label = msg.role === "user" ? "You" : "moanete";
+      lines.push(`**${label}:** ${msg.text}`);
     }
     lines.push("");
   }

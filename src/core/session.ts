@@ -6,7 +6,7 @@ import { Analyzer } from "./analyzer.ts";
 import { AudioCapture, type AudioSource } from "./audio.ts";
 import { loadConfig } from "./config.ts";
 import type { Config } from "./config.ts";
-import type { ScreenCapture } from "./storage.ts";
+import type { ScreenCapture, StoredChatMessage } from "./storage.ts";
 import { type TranscriptLine, saveSession } from "./storage.ts";
 
 /** Bigram similarity (Dice coefficient). Returns true if >= 0.7. */
@@ -301,12 +301,11 @@ export class Session {
     };
 
     // Init mic STT
-    // Firefox SpeechRecognition exists but often fails silently (service-not-allowed, network errors).
-    // Warn Firefox users to switch to Whisper for reliable STT.
-    const isFirefox = navigator.userAgent.includes("Firefox");
-    if (cfg.sttProvider === "browser" && isFirefox) {
+    // Warn non-Chromium users about STT limitations.
+    const isChromium = "chrome" in window;
+    if (cfg.sttProvider === "browser" && !isChromium) {
       this.onWarning?.(
-        "Firefox Browser STT may not work reliably — switch to Whisper (local) in Settings for better results",
+        "Browser STT may not work reliably outside Chromium-based browsers — use Chrome, Edge, or Brave for best results",
       );
     }
 
@@ -421,7 +420,7 @@ export class Session {
     return null;
   }
 
-  async stop(): Promise<void> {
+  async stop(chatMessages?: StoredChatMessage[]): Promise<void> {
     this._running = false;
     this.stopAutoCapture();
     this._analyzer?.stop();
@@ -449,6 +448,7 @@ export class Session {
                 description,
               }))
             : undefined,
+        chatMessages: chatMessages && chatMessages.length > 0 ? chatMessages : undefined,
       });
     }
   }

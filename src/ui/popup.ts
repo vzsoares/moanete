@@ -496,26 +496,14 @@ function buildQAContext(): string {
 
 function detectCompatHints(): void {
   const hints: string[] = [];
-  const ua = navigator.userAgent;
-  const isFirefox = ua.includes("Firefox");
   const isChromium = "chrome" in window;
-  const isMac = ua.includes("Macintosh");
-  const isLinux = ua.includes("Linux");
 
-  if (!("documentPictureInPicture" in window)) {
-    hints.push("PiP overlay not available in this browser (requires Chrome/Edge 116+)");
-  }
-
-  if (!(window.SpeechRecognition || window.webkitSpeechRecognition)) {
-    hints.push("Browser speech recognition not available — use Whisper (local) for STT instead");
-  }
-
-  if (isMac) {
-    hints.push("System audio capture unavailable on macOS — tab audio only via Chrome");
-  } else if (isLinux && isChromium) {
-    hints.push("For system audio on Linux, PipeWire is required — Firefox may work better");
-  } else if (isFirefox && !isLinux) {
-    hints.push("Firefox does not support system audio capture on this OS");
+  if (!isChromium) {
+    hints.push(
+      "moanete works best on a Chromium-based browser (Chrome, Edge, Brave, Arc) — PiP, Browser STT, and audio capture may not work in other browsers",
+    );
+  } else if (!("documentPictureInPicture" in window)) {
+    hints.push("PiP overlay requires Chrome/Edge 116+ — please update your browser");
   }
 
   const container = $<HTMLDivElement>("#compat-hints");

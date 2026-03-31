@@ -259,6 +259,7 @@ Ensure the package exports are stable and consumable by the hosted version repo.
 - [x] Follow-up suggestions (3 clickable chips after each answer)
 - [x] Custom chat prompt configurable from Settings
 - [x] Auto-assist mode — monitors session, speaks only when relevant (configurable interval)
+- [x] Persist chat messages to session history (IndexedDB) and include in markdown export
 
 ### PiP enhancements
 - [x] Full chat in PiP with presets, markdown rendering, and follow-up suggestions

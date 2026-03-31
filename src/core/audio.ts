@@ -97,10 +97,10 @@ export class AudioCapture {
       }
 
       if (this._tabStream.getAudioTracks().length === 0) {
-        const isFirefox = navigator.userAgent.includes("Firefox");
-        const msg = isFirefox
-          ? "No audio from screen share — Firefox only captures audio when sharing a browser tab (not a window or screen). On Linux, PipeWire is also required."
-          : "No audio tracks received — make sure to check 'Share tab audio' in the share picker";
+        const isChromium = "chrome" in window;
+        const msg = isChromium
+          ? "No audio tracks received — make sure to check 'Share tab audio' in the share picker"
+          : "No audio from screen share — use a Chromium-based browser (Chrome, Edge, Brave) for reliable audio capture";
         this._onWarning?.(msg);
         this._tabStream = null;
       } else {

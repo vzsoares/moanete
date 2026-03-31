@@ -7,7 +7,7 @@ import {
   pushTranscript,
 } from "../../core/mcp-bridge.ts";
 import { Session, type TranscriptEntry } from "../../core/session.ts";
-import type { ScreenCapture, StoredSession } from "../../core/storage.ts";
+import type { ScreenCapture, StoredChatMessage, StoredSession } from "../../core/storage.ts";
 import { analyzeScreen, answerQuestion, summarizeTranscript } from "../../core/summarizer.ts";
 import type { ChatMessage } from "../../providers/llm/types.ts";
 import { MoaneteElement } from "../base.ts";
@@ -36,6 +36,7 @@ import type { MnTranscript } from "./mn-transcript.ts";
 export class MnDashboard extends MoaneteElement {
   private _session: Session | null = null;
   private _chatHistory: ChatMessage[] = [];
+  private _storedChatMessages: StoredChatMessage[] = [];
   private _pipWindow: Window | null = null;
   private _autoAssistTimer: ReturnType<typeof setInterval> | null = null;
   private _autoAssistPrompt = "";
@@ -238,6 +239,8 @@ export class MnDashboard extends MoaneteElement {
 
       if (!resumed) {
         this.$<MnTranscript>("mn-transcript").reset();
+        this._chatHistory = [];
+        this._storedChatMessages = [];
       }
 
       if (cfg.autoPip) {
@@ -272,8 +275,10 @@ export class MnDashboard extends MoaneteElement {
       }
     }
 
-    await this._session.stop();
+    await this._session.stop(this._storedChatMessages);
     this._session = null;
+    this._chatHistory = [];
+    this._storedChatMessages = [];
     pushStatus(false);
     this.$<MnStatus>("mn-status").setState("off", "Stopped — session saved");
     stopBtn.disabled = false;
@@ -345,6 +350,7 @@ Do NOT repeat previous observations. Be concise (2-3 sentences max).`;
       const trimmed = result.trim();
       if (trimmed === "SKIP" || trimmed.startsWith("SKIP")) return;
 
+      this._trackChat("assistant", trimmed);
       this.$<MnChat>("mn-chat").appendMessage("assistant", trimmed);
       pipSetChatReply(trimmed, []);
     } catch {
@@ -355,7 +361,7 @@ Do NOT repeat previous observations. Be concise (2-3 sentences max).`;
   private async _handleChatGenerate(prompt: string): Promise<void> {
     if (!this._session?.llm || !this._session.analyzer || !prompt) return;
     const chat = this.$<MnChat>("mn-chat");
-    chat.appendMessage("user", "[Generate from preset]");
+    this._trackChat("user", "[Generate from preset]");
 
     try {
       const context = this._buildQAContext();
@@ -363,25 +369,33 @@ Do NOT repeat previous observations. Be concise (2-3 sentences max).`;
         [{ role: "user", content: `${context}\n\nProduce the requested analysis.` }],
         { system: prompt, maxTokens: 1500 },
       );
+      this._trackChat("assistant", result);
       chat.appendMessage("assistant", result);
       pipSetChatReply(result, []);
     } catch (e) {
-      chat.appendMessage("assistant", `Error: ${e instanceof Error ? e.message : String(e)}`);
+      const msg = `Error: ${e instanceof Error ? e.message : String(e)}`;
+      this._trackChat("assistant", msg);
+      chat.appendMessage("assistant", msg);
     }
+  }
+
+  private _trackChat(role: "user" | "assistant", text: string): void {
+    this._storedChatMessages.push({ role, text, timestamp: Date.now() });
   }
 
   private async _handleChat(question: string): Promise<void> {
     if (!this._session?.llm || !this._session.analyzer) return;
+    this._trackChat("user", question);
     try {
       const context = this._buildQAContext();
       const result = await answerQuestion(this._session.llm, question, context, this._chatHistory);
       this._chatHistory = result.history;
+      this._trackChat("assistant", result.answer);
       this.$<MnChat>("mn-chat").appendMessage("assistant", result.answer, result.suggestions);
     } catch (e) {
-      this.$<MnChat>("mn-chat").appendMessage(
-        "assistant",
-        `Error: ${e instanceof Error ? e.message : String(e)}`,
-      );
+      const msg = `Error: ${e instanceof Error ? e.message : String(e)}`;
+      this._trackChat("assistant", msg);
+      this.$<MnChat>("mn-chat").appendMessage("assistant", msg);
     }
   }
 
