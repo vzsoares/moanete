@@ -3,6 +3,7 @@ export interface Config {
   llmProvider: string;
   ollamaHost: string;
   ollamaModel: string;
+  ollamaVisionModel: string;
   openaiApiKey: string;
   openaiModel: string;
   anthropicApiKey: string;
@@ -26,6 +27,7 @@ export const DEFAULTS: Config = {
   llmProvider: "ollama",
   ollamaHost: "http://localhost:11434",
   ollamaModel: "llama3.2",
+  ollamaVisionModel: "llava",
   openaiApiKey: "",
   openaiModel: "gpt-4o-mini",
   anthropicApiKey: "",

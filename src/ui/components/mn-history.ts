@@ -143,6 +143,22 @@ export class MnHistory extends MoaneteElement {
       }
     }
 
+    if (s.screenCaptures && s.screenCaptures.length > 0) {
+      html += '<h5 class="text-xs font-semibold text-primary mb-1">Screen Captures</h5>';
+      html += '<div class="flex flex-col gap-3 mb-3">';
+      for (const cap of s.screenCaptures) {
+        const time = new Date(cap.timestamp).toLocaleTimeString();
+        html += `<div class="bg-base-300 rounded p-2 border border-base-content/5">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-xs font-semibold">${time}</span>
+          </div>
+          <img src="data:image/png;base64,${cap.image}" class="w-full rounded mb-1 cursor-pointer screen-cap-img" alt="Screen capture at ${time}" />
+          <p class="text-xs text-base-content/70">${escapeHtml(cap.description)}</p>
+        </div>`;
+      }
+      html += "</div>";
+    }
+
     if (s.summary) {
       html += '<h5 class="text-xs font-semibold text-primary mb-1">Summary</h5>';
       html += `<p class="text-xs leading-relaxed whitespace-pre-wrap">${escapeHtml(s.summary)}</p>`;

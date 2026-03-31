@@ -246,3 +246,6 @@ Ensure the package exports are stable and consumable by the hosted version repo.
 - [x] Display visual analysis results in the UI (summary panel)
 - [x] Add "Analyze Screen" button (visible when screen share is active)
 - [x] Useful for reading code on screen, whiteboard diagrams, shared slides
+- [x] Auto-capture mode (every 5s) — descriptions fed into analyzer context for richer insights
+- [x] Screen captures (image + description + timestamp) saved to session history in IndexedDB
+- [x] Screen captures displayed in history detail view with thumbnails

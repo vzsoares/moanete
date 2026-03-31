@@ -2,6 +2,14 @@ const DB_NAME = "moanete";
 const DB_VERSION = 1;
 const STORE_NAME = "sessions";
 
+export interface ScreenCapture {
+  timestamp: number;
+  /** Base64-encoded PNG (no data: prefix) */
+  image: string;
+  /** LLM-generated description of the screen content */
+  description: string;
+}
+
 export interface StoredSession {
   id: string;
   startedAt: number;
@@ -11,6 +19,7 @@ export interface StoredSession {
   insights: Record<string, string[]>;
   summary: string;
   categories: string[];
+  screenCaptures?: ScreenCapture[];
 }
 
 export interface TranscriptLine {
@@ -112,6 +121,14 @@ export function exportSessionMarkdown(s: StoredSession): string {
       }
     }
     lines.push("");
+  }
+
+  if (s.screenCaptures && s.screenCaptures.length > 0) {
+    lines.push("## Screen Captures", "");
+    for (const cap of s.screenCaptures) {
+      const time = new Date(cap.timestamp).toLocaleTimeString();
+      lines.push(`### ${time}`, "", cap.description, "");
+    }
   }
 
   if (s.summary) {

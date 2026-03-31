@@ -58,9 +58,12 @@ export class MnDashboard extends MoaneteElement {
           <button class="btn-start btn btn-primary btn-sm">Start Session</button>
           <button class="btn-stop btn btn-error btn-sm" hidden>Stop</button>
           <button class="btn-pip btn btn-ghost btn-sm" hidden>PiP</button>
-          <button class="btn-screen btn btn-ghost btn-sm gap-1" hidden>
+          <button class="btn-screen btn btn-ghost btn-sm gap-1" hidden title="Analyze screen once">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-            Analyze Screen
+          </button>
+          <button class="btn-auto-screen btn btn-ghost btn-sm gap-1" hidden title="Auto-capture screen every 5s">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            Auto
           </button>
           <button class="btn-mcp btn btn-ghost btn-sm gap-1">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
@@ -119,6 +122,9 @@ export class MnDashboard extends MoaneteElement {
     this.$<HTMLButtonElement>(".btn-stop").addEventListener("click", () => this._stopSession());
     this.$<HTMLButtonElement>(".btn-pip").addEventListener("click", () => this._openPiP());
     this.$<HTMLButtonElement>(".btn-screen").addEventListener("click", () => this._analyzeScreen());
+    this.$<HTMLButtonElement>(".btn-auto-screen").addEventListener("click", () =>
+      this._toggleAutoCapture(),
+    );
     this.$<HTMLButtonElement>(".btn-settings").addEventListener("click", () =>
       this.$<MnSettings>("mn-settings").open(),
     );
@@ -203,8 +209,10 @@ export class MnDashboard extends MoaneteElement {
       const tabLevel = this.querySelector<HTMLElement>(".tab-level");
       if (tabLevel) tabLevel.style.display = cfg.captureTab ? "" : "none";
 
-      // Show "Analyze Screen" button when screen share video track is available
-      this.$<HTMLButtonElement>(".btn-screen").hidden = !this._session?.hasVideoTrack;
+      // Show screen capture buttons when screen share video track is available
+      const hasVideo = this._session?.hasVideoTrack ?? false;
+      this.$<HTMLButtonElement>(".btn-screen").hidden = !hasVideo;
+      this.$<HTMLButtonElement>(".btn-auto-screen").hidden = !hasVideo;
 
       if (!resumed) {
         this.$<MnTranscript>("mn-transcript").reset();
@@ -223,6 +231,7 @@ export class MnDashboard extends MoaneteElement {
     this.$<HTMLButtonElement>(".btn-stop").hidden = true;
     this.$<HTMLButtonElement>(".btn-pip").hidden = true;
     this.$<HTMLButtonElement>(".btn-screen").hidden = true;
+    this.$<HTMLButtonElement>(".btn-auto-screen").hidden = true;
     this.$<HTMLDivElement>(".audio-indicators").hidden = true;
     this._pipWindow?.close();
   }
@@ -269,8 +278,30 @@ export class MnDashboard extends MoaneteElement {
     }
   }
 
+  private _toggleAutoCapture(): void {
+    if (!this._session) return;
+    const btn = this.$<HTMLButtonElement>(".btn-auto-screen");
+
+    if (this._session.autoCapturing) {
+      this._session.stopAutoCapture();
+      btn.classList.remove("btn-active", "btn-accent");
+      btn.classList.add("btn-ghost");
+    } else {
+      this._session.onScreenCapture = (capture) => {
+        // Show latest description in status
+        this.$<MnStatus>("mn-status").setState(
+          "on",
+          `Screen: ${capture.description.slice(0, 60)}...`,
+        );
+      };
+      this._session.startAutoCapture(5000);
+      btn.classList.add("btn-active", "btn-accent");
+      btn.classList.remove("btn-ghost");
+    }
+  }
+
   private async _analyzeScreen(): Promise<void> {
-    if (!this._session?.llm || !this._session.hasVideoTrack) return;
+    if (!this._session?.visionLlm || !this._session.hasVideoTrack) return;
 
     const summary = this.$<MnSummary>("mn-summary");
     summary.setLoading();
@@ -278,7 +309,7 @@ export class MnDashboard extends MoaneteElement {
     try {
       const frameBase64 = await this._session.captureFrame();
       const transcript = this._session.analyzer?.transcript ?? "";
-      const result = await analyzeScreen(this._session.llm, frameBase64, transcript);
+      const result = await analyzeScreen(this._session.visionLlm, frameBase64, transcript);
       summary.setSummary(result);
     } catch (e) {
       summary.setSummary(`Screen analysis error: ${e instanceof Error ? e.message : String(e)}`);

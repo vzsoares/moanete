@@ -86,6 +86,7 @@ export class Analyzer {
   private _agentPrompts: Map<string, string>;
   private _singlePrompt: string;
   private _transcriptChunks: string[] = [];
+  private _screenDescriptions: string[] = [];
   private _insights: Record<string, string[]>;
   private _intervalMs: number;
   private _multiAgent: boolean;
@@ -131,6 +132,11 @@ export class Analyzer {
 
   feed(text: string): void {
     this._transcriptChunks.push(text);
+  }
+
+  /** Add a screen capture description to the analysis context. */
+  feedScreenContext(description: string): void {
+    this._screenDescriptions.push(description);
   }
 
   /** Run analysis immediately (instead of waiting for the timer). */
@@ -188,9 +194,16 @@ export class Analyzer {
     }
   }
 
+  private _buildScreenContext(): string {
+    if (this._screenDescriptions.length === 0) return "";
+    const recent = this._screenDescriptions.slice(-3);
+    return `\n\nScreen context (recent captures):\n${recent.join("\n---\n")}`;
+  }
+
   /** Multi-agent: one parallel LLM call per category. */
   private async _analyzeMultiAgent(): Promise<void> {
     const fullText = this._transcriptChunks.join(" ").slice(-3000);
+    const screenCtx = this._buildScreenContext();
     let anyUpdated = false;
 
     const tasks = this._keys.map(async (key, i) => {
@@ -204,7 +217,7 @@ export class Analyzer {
       const messages = [
         {
           role: "user",
-          content: `Prior ${category.toLowerCase()} (do not repeat): ${JSON.stringify(prior)}\n\nLatest transcript:\n${fullText}`,
+          content: `Prior ${category.toLowerCase()} (do not repeat): ${JSON.stringify(prior)}\n\nLatest transcript:\n${fullText}${screenCtx}`,
         },
       ];
 
@@ -248,6 +261,7 @@ export class Analyzer {
   /** Single-agent fallback: one LLM call with all categories. */
   private async _analyzeSingle(): Promise<void> {
     const fullText = this._transcriptChunks.join(" ");
+    const screenCtx = this._buildScreenContext();
     const prior = Object.fromEntries(
       Object.entries(this._insights).map(([k, v]) => [k, v.slice(-5)]),
     );
@@ -255,7 +269,7 @@ export class Analyzer {
     const messages = [
       {
         role: "user",
-        content: `Prior insights (do not repeat): ${JSON.stringify(prior)}\n\nLatest transcript:\n${fullText.slice(-3000)}`,
+        content: `Prior insights (do not repeat): ${JSON.stringify(prior)}\n\nLatest transcript:\n${fullText.slice(-3000)}${screenCtx}`,
       },
     ];
 

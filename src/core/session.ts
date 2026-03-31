@@ -6,7 +6,28 @@ import { Analyzer } from "./analyzer.ts";
 import { AudioCapture, type AudioSource } from "./audio.ts";
 import { loadConfig } from "./config.ts";
 import type { Config } from "./config.ts";
+import type { ScreenCapture } from "./storage.ts";
 import { type TranscriptLine, saveSession } from "./storage.ts";
+
+/** Bigram similarity (Dice coefficient). Returns true if >= 0.7. */
+function isSimilar(a: string, b: string, threshold = 0.7): boolean {
+  if (!a || !b) return false;
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]/g, "");
+  const bigrams = (s: string): Set<string> => {
+    const set = new Set<string>();
+    const n = norm(s);
+    for (let i = 0; i < n.length - 1; i++) set.add(n.slice(i, i + 2));
+    return set;
+  };
+  const setA = bigrams(a);
+  const setB = bigrams(b);
+  if (setA.size === 0 || setB.size === 0) return false;
+  let intersection = 0;
+  for (const bg of setA) {
+    if (setB.has(bg)) intersection++;
+  }
+  return (2 * intersection) / (setA.size + setB.size) >= threshold;
+}
 
 // Register all providers (side-effect imports)
 import "../providers/stt/browser.ts";
@@ -26,11 +47,14 @@ export class Session {
   private _micSTT: STTProvider | null = null;
   private _tabSTT: STTProvider | null = null;
   private _llm: LLMProvider | null = null;
+  private _visionLlm: LLMProvider | null = null;
   private _analyzer: Analyzer | null = null;
   private _running = false;
   private _config: Config | null = null;
   private _startedAt = 0;
   private _transcriptLines: TranscriptLine[] = [];
+  private _screenCaptures: ScreenCapture[] = [];
+  private _screenTimer: ReturnType<typeof setInterval> | null = null;
   private _summary = "";
 
   onTranscript: ((entry: TranscriptEntry) => void) | null = null;
@@ -38,6 +62,7 @@ export class Session {
   onError: ((error: string) => void) | null = null;
   onWarning: ((msg: string) => void) | null = null;
   onActivity: ((source: AudioSource, level: number) => void) | null = null;
+  onScreenCapture: ((capture: ScreenCapture) => void) | null = null;
 
   get analyzer(): Analyzer | null {
     return this._analyzer;
@@ -45,6 +70,10 @@ export class Session {
 
   get llm(): LLMProvider | null {
     return this._llm;
+  }
+
+  get visionLlm(): LLMProvider | null {
+    return this._visionLlm;
   }
 
   get running(): boolean {
@@ -56,10 +85,78 @@ export class Session {
     return this._audio?.hasVideoTrack ?? false;
   }
 
+  get screenCaptures(): ScreenCapture[] {
+    return [...this._screenCaptures];
+  }
+
+  get autoCapturing(): boolean {
+    return this._screenTimer !== null;
+  }
+
   /** Capture a frame from the active screen share */
   async captureFrame(maxWidth = 1024): Promise<string> {
     if (!this._audio) throw new Error("No active audio capture");
     return this._audio.captureFrame(maxWidth);
+  }
+
+  /** Start auto-capturing screen every intervalMs and analyzing with LLM. */
+  startAutoCapture(intervalMs = 5000): void {
+    if (this._screenTimer) return;
+    this._screenTimer = setInterval(() => this._captureAndAnalyze(), intervalMs);
+    // Capture immediately on start
+    this._captureAndAnalyze();
+  }
+
+  stopAutoCapture(): void {
+    if (this._screenTimer) {
+      clearInterval(this._screenTimer);
+      this._screenTimer = null;
+    }
+  }
+
+  private _lastScreenDescription = "";
+
+  private async _captureAndAnalyze(): Promise<void> {
+    if (!this._audio?.hasVideoTrack || !this._visionLlm) return;
+
+    try {
+      const image = await this._audio.captureFrame(800);
+
+      // Build a compact prompt — we don't need the full analyzeScreen prompt,
+      // just a quick description to feed into the analyzer context
+      const description = await this._visionLlm!.chat(
+        [
+          {
+            role: "user",
+            content: [
+              { type: "image", data: image, mediaType: "image/png" },
+              {
+                type: "text",
+                text: "Briefly describe what is on screen (code, slides, diagrams, text). 2-3 sentences max.",
+              },
+            ],
+          },
+        ],
+        { maxTokens: 200 },
+      );
+
+      const capture: ScreenCapture = {
+        timestamp: Date.now(),
+        image,
+        description,
+      };
+
+      // Always save to history, but only push to analyzer if the screen changed
+      this._screenCaptures.push(capture);
+      this.onScreenCapture?.(capture);
+
+      if (!isSimilar(this._lastScreenDescription, description)) {
+        this._analyzer?.feedScreenContext(description);
+        this._lastScreenDescription = description;
+      }
+    } catch (e) {
+      console.warn("[screen-capture]", e instanceof Error ? e.message : String(e));
+    }
   }
 
   get summary(): string {
@@ -110,6 +207,18 @@ export class Session {
       apiKey: cfg.llmProvider === "openai" ? cfg.openaiApiKey : cfg.anthropicApiKey,
       baseUrl: cfg.llmProvider === "anthropic" ? cfg.anthropicBaseUrl : undefined,
     });
+
+    // Init vision LLM — for Ollama use a separate vision-capable model,
+    // for OpenAI/Anthropic the default models already support vision
+    if (cfg.llmProvider === "ollama" && cfg.ollamaVisionModel) {
+      this._visionLlm = createLLM("ollama");
+      this._visionLlm.configure({
+        host: cfg.ollamaHost,
+        model: cfg.ollamaVisionModel,
+      });
+    } else {
+      this._visionLlm = this._llm;
+    }
 
     // Init analyzer
     const categories = cfg.insightTabs
@@ -272,6 +381,7 @@ export class Session {
 
   async stop(): Promise<void> {
     this._running = false;
+    this.stopAutoCapture();
     this._analyzer?.stop();
     this._micSTT?.stop();
     this._tabSTT?.stop();
@@ -289,6 +399,7 @@ export class Session {
         insights: this._analyzer.insights,
         summary: this._summary,
         categories: this._analyzer.categories,
+        screenCaptures: this._screenCaptures.length > 0 ? this._screenCaptures : undefined,
       });
     }
   }

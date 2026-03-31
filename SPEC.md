@@ -126,6 +126,8 @@ Pluggable registry pattern — providers register via side-effect imports:
 - On-demand transcript summary via LLM
 - Q&A chat with transcript + insights as context
 - Screen capture analysis — captures a frame from the active screen share video track, sends to a vision-capable LLM with transcript context, displays results in the summary panel
+- Auto-capture mode — captures screen every 5 seconds, generates descriptions, feeds them into analyzer context so insights reflect what's on screen
+- Screen captures (image + description + timestamp) are saved to session history in IndexedDB
 - All LLM providers support multi-modal messages (text + image) for vision analysis
 - Same "court stenographer" system prompts
 
@@ -168,6 +170,7 @@ App settings stored in `localStorage`. Session history stored in IndexedDB.
 | `llmProvider` | `ollama` | `ollama`, `openai`, or `anthropic` |
 | `ollamaHost` | `http://localhost:11434` | Ollama server URL |
 | `ollamaModel` | `llama3.2` | Ollama text model |
+| `ollamaVisionModel` | `llava` | Ollama vision model (screen capture) |
 | `openaiApiKey` | *(empty)* | OpenAI API key (BYOK) |
 | `openaiModel` | `gpt-4o-mini` | OpenAI model |
 | `anthropicApiKey` | *(empty)* | Anthropic API key (BYOK) |

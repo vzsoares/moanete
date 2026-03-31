@@ -66,6 +66,7 @@ const LLM_FIELDS: Record<string, DynamicField[]> = {
   ollama: [
     { label: "Ollama Host", key: "ollamaHost", placeholder: "http://localhost:11434" },
     { label: "Model", key: "ollamaModel", placeholder: "llama3.2" },
+    { label: "Vision Model (screen capture)", key: "ollamaVisionModel", placeholder: "llava" },
   ],
   openai: [
     { label: "API Key", key: "openaiApiKey", type: "password", placeholder: "sk-..." },
