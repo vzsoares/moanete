@@ -11,8 +11,10 @@ RULES:
 - Respond ONLY with valid JSON — no markdown fences, no extra text.
 - Extract specific, actionable items grounded in what was actually said or shown.
 - Each item should be self-contained (understandable without reading the transcript).
-- Do NOT repeat items from prior context.
-- The list may be empty if nothing new is relevant.
+- STRICT DEDUP: before adding an item, check the "Already extracted" section. If ANY existing \
+item conveys the same meaning — even with different wording — do NOT add it. A rephrase is a \
+duplicate. If in doubt, skip it.
+- Return { "items": [] } if nothing genuinely new exists. This is the EXPECTED common case.
 - One sentence per item, max two if needed for clarity.
 - ALWAYS write items in {language}.
 
@@ -29,8 +31,10 @@ RULES:
 - Respond ONLY with valid JSON — no markdown fences, no extra text.
 - Extract specific, actionable items grounded in what was actually said or shown.
 - Each item should be self-contained (understandable without reading the transcript).
-- Do NOT repeat items from prior context.
-- Each list may be empty if nothing new is relevant.
+- STRICT DEDUP: before adding an item, check the "Already extracted" section. If ANY existing \
+item conveys the same meaning — even with different wording — do NOT add it. A rephrase is a \
+duplicate. If in doubt, skip it.
+- Empty lists are the EXPECTED common case when nothing genuinely new exists.
 - One sentence per item, max two if needed for clarity.
 - ALWAYS write items in {language}.
 
@@ -142,6 +146,8 @@ export class Analyzer {
   /** Rolling summary of older transcript that fell outside the window. */
   private _contextSummary = "";
   private _chunksSummarized = 0;
+  /** True when new data has been fed since the last analysis cycle. */
+  private _dirty = false;
 
   constructor(llm: LLMProvider, opts: AnalyzerOptions = {}) {
     this._llm = llm;
@@ -186,7 +192,7 @@ export class Analyzer {
 
   feed(text: string): void {
     this._chunks.push({ text, timestamp: Date.now() });
-    // Prune old chunks to bound memory
+    this._dirty = true;
     if (this._chunks.length > MAX_CHUNKS) {
       this._chunks = this._chunks.slice(-MAX_CHUNKS);
     }
@@ -195,6 +201,7 @@ export class Analyzer {
   /** Add a screen capture description to the analysis context. */
   feedScreenContext(description: string): void {
     this._screenDescriptions.push(description);
+    this._dirty = true;
     if (this._screenDescriptions.length > MAX_SCREEN_DESCS) {
       this._screenDescriptions = this._screenDescriptions.slice(-MAX_SCREEN_DESCS);
     }
@@ -346,6 +353,8 @@ export class Analyzer {
 
   private async _analyze(): Promise<void> {
     if (this._chunks.length === 0 && this._screenDescriptions.length === 0) return;
+    if (!this._dirty) return;
+    this._dirty = false;
 
     // Update rolling summary if needed (runs in parallel-safe way)
     await this._maybeUpdateSummary();
@@ -379,9 +388,7 @@ export class Analyzer {
       });
 
       const data = JSON.parse(raw) as { items?: unknown[] };
-      const items = data.items ?? [];
-
-      for (const rawItem of items) {
+      for (const rawItem of data.items ?? []) {
         const item = coerceItem(rawItem);
         if (item && !existing.includes(item)) {
           existing.push(item);

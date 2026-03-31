@@ -458,13 +458,27 @@ function buildQAContext(): string {
   const a = session?.analyzer;
   if (!a) return "";
   const insights = a.insights;
-  const parts = [`Transcript (last 2000 chars): ${a.transcript.slice(-2000)}`];
+  const parts: string[] = [];
+  const transcript = a.transcript.slice(-2000);
+  if (transcript) {
+    parts.push(`## Transcript (last 2000 chars)\n${transcript}`);
+  }
+  const screens = a.screenDescriptions;
+  if (screens.length > 0) {
+    parts.push(`## Screen content\n${screens.map((d, i) => `[Screen ${i + 1}] ${d}`).join("\n")}`);
+  }
+  const insightLines: string[] = [];
   for (let i = 0; i < a.categories.length; i++) {
     const key = a.keys[i]!;
     const items = insights[key] || [];
-    parts.push(`${a.categories[i]}: ${items.slice(-5).join(", ")}`);
+    if (items.length > 0) {
+      insightLines.push(`${a.categories[i]}: ${items.slice(-5).join(", ")}`);
+    }
   }
-  return parts.join("\n");
+  if (insightLines.length > 0) {
+    parts.push(`## Extracted insights\n${insightLines.join("\n")}`);
+  }
+  return parts.join("\n\n");
 }
 
 // --- Browser compatibility hints ---

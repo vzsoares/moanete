@@ -28,20 +28,25 @@ export class MnInsights extends MoaneteElement {
       const panel = this.querySelector<HTMLDivElement>(`#insight-${key}`);
       if (!panel) continue;
 
-      if (items.length === 0) {
-        panel.innerHTML = '<p class="text-xs text-base-content/40 italic">Nothing yet...</p>';
-      } else {
-        const container = document.createElement("div");
-        container.className = "flex flex-col gap-2";
-        for (const item of items.slice(-10)) {
-          const card = document.createElement("div");
-          card.className =
-            "bg-base-200 rounded-lg px-3 py-2 text-xs leading-relaxed border-l-2 border-primary";
-          card.textContent = item;
-          container.appendChild(card);
-        }
+      if (items.length === 0) continue;
+
+      // Get or create the container
+      let container = panel.querySelector<HTMLDivElement>(".insight-list");
+      if (!container) {
         panel.innerHTML = "";
+        container = document.createElement("div");
+        container.className = "insight-list flex flex-col gap-2";
         panel.appendChild(container);
+      }
+
+      // Only append items that are new
+      const existing = container.childElementCount;
+      for (const item of items.slice(existing)) {
+        const card = document.createElement("div");
+        card.className =
+          "bg-base-200 rounded-lg px-3 py-2 text-xs leading-relaxed border-l-2 border-primary animate-fade-in";
+        card.textContent = item;
+        container.appendChild(card);
       }
     }
   }
