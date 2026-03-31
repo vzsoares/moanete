@@ -115,6 +115,10 @@ export class Session {
     return [...this._screenCaptures];
   }
 
+  get transcriptLines(): TranscriptLine[] {
+    return [...this._transcriptLines];
+  }
+
   get autoCapturing(): boolean {
     return this._screenTimer !== null;
   }
@@ -437,7 +441,14 @@ export class Session {
         insights: this._analyzer.insights,
         summary: this._summary,
         categories: this._analyzer.categories,
-        screenCaptures: this._screenCaptures.length > 0 ? this._screenCaptures : undefined,
+        screenCaptures:
+          this._screenCaptures.length > 0
+            ? this._screenCaptures.map(({ timestamp, description }) => ({
+                timestamp,
+                image: "",
+                description,
+              }))
+            : undefined,
       });
     }
   }

@@ -99,6 +99,10 @@ export function exportSessionMarkdown(s: StoredSession): string {
   const dur = formatDuration(s.duration);
   const lines: string[] = [`# Session — ${date} (${dur})`, ""];
 
+  if (s.summary) {
+    lines.push("## Summary", "", s.summary, "");
+  }
+
   lines.push("## Transcript", "");
   for (const line of s.transcript) {
     const label = line.source === "mic" ? "You" : "Them";
@@ -129,10 +133,6 @@ export function exportSessionMarkdown(s: StoredSession): string {
       const time = new Date(cap.timestamp).toLocaleTimeString();
       lines.push(`### ${time}`, "", cap.description, "");
     }
-  }
-
-  if (s.summary) {
-    lines.push("## Summary", "", s.summary);
   }
 
   return lines.join("\n");

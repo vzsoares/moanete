@@ -6,7 +6,7 @@ import {
   listSessions,
 } from "../../core/storage.ts";
 import { MoaneteElement } from "../base.ts";
-import { escapeHtml, formatDuration } from "../util.ts";
+import { escapeHtml, formatDuration, renderMarkdown } from "../util.ts";
 
 export class MnHistory extends MoaneteElement {
   open(): void {
@@ -81,6 +81,7 @@ export class MnHistory extends MoaneteElement {
           </div>
         </div>
         <p class="text-xs text-base-content/60 truncate">${escapeHtml(preview)}</p>
+        ${s.summary ? `<p class="text-xs text-base-content/40 truncate mt-1">${escapeHtml(s.summary.slice(0, 120))}</p>` : ""}
         <div class="flex gap-1 mt-2">
           <button class="btn btn-xs btn-primary resume-btn">Resume</button>
           <button class="btn btn-xs btn-ghost view-btn">View</button>
@@ -122,6 +123,12 @@ export class MnHistory extends MoaneteElement {
     const dur = formatDuration(s.duration);
 
     let html = `<h4 class="text-sm font-bold mb-3">${date} (${dur})</h4>`;
+
+    if (s.summary) {
+      html += '<h5 class="text-xs font-semibold text-primary mb-1">Summary</h5>';
+      html += `<div class="text-xs leading-relaxed mb-4 prose prose-xs max-w-none">${renderMarkdown(s.summary)}</div>`;
+    }
+
     html += '<h5 class="text-xs font-semibold text-primary mb-1">Transcript</h5>';
     html += '<div class="mb-4 flex flex-col gap-1">';
     for (const line of s.transcript) {
@@ -148,23 +155,14 @@ export class MnHistory extends MoaneteElement {
 
     if (s.screenCaptures && s.screenCaptures.length > 0) {
       html += '<h5 class="text-xs font-semibold text-primary mb-1">Screen Captures</h5>';
-      html += '<div class="flex flex-col gap-3 mb-3">';
+      html += '<div class="flex flex-col gap-2 mb-3">';
       for (const cap of s.screenCaptures) {
         const time = new Date(cap.timestamp).toLocaleTimeString();
-        html += `<div class="bg-base-300 rounded p-2 border border-base-content/5">
-          <div class="flex justify-between items-center mb-1">
-            <span class="text-xs font-semibold">${time}</span>
-          </div>
-          <img src="data:image/png;base64,${cap.image}" class="w-full rounded mb-1 cursor-pointer screen-cap-img" alt="Screen capture at ${time}" />
-          <p class="text-xs text-base-content/70">${escapeHtml(cap.description)}</p>
+        html += `<div class="bg-base-300 rounded px-2 py-1 text-xs border-l-2 border-primary">
+          <span class="font-semibold">${time}</span> — ${escapeHtml(cap.description)}
         </div>`;
       }
       html += "</div>";
-    }
-
-    if (s.summary) {
-      html += '<h5 class="text-xs font-semibold text-primary mb-1">Summary</h5>';
-      html += `<p class="text-xs leading-relaxed whitespace-pre-wrap">${escapeHtml(s.summary)}</p>`;
     }
 
     detail.innerHTML = html;

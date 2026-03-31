@@ -256,12 +256,39 @@ export class MnDashboard extends MoaneteElement {
   }
 
   private async _stopSession(): Promise<void> {
-    await this._session?.stop();
+    if (!this._session) return;
+
+    // Show loading state on stop button
+    const stopBtn = this.$<HTMLButtonElement>(".btn-stop");
+    stopBtn.disabled = true;
+    stopBtn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Saving...';
+    this.$<MnStatus>("mn-status").setState("on", "Generating summary...");
+
+    // Generate summary before stopping
+    if (this._session.llm && this._session.analyzer) {
+      try {
+        const text = await summarizeTranscript(
+          this._session.llm,
+          this._session.analyzer.transcript,
+          this._session.analyzer.screenDescriptions,
+        );
+        this._session.summary = text;
+        this.$<MnSummary>("mn-summary").setSummary(text);
+        pipSetSummary(text);
+        pushSummary(text);
+      } catch {
+        // Non-critical — save session without summary
+      }
+    }
+
+    await this._session.stop();
     this._session = null;
     pushStatus(false);
     this.$<MnStatus>("mn-status").setState("off", "Stopped — session saved");
+    stopBtn.disabled = false;
+    stopBtn.innerHTML = "Stop";
     this.$<HTMLButtonElement>(".btn-start").hidden = false;
-    this.$<HTMLButtonElement>(".btn-stop").hidden = true;
+    stopBtn.hidden = true;
     this.$<HTMLButtonElement>(".btn-pip").hidden = true;
     this.$<HTMLButtonElement>(".btn-screen").hidden = true;
     this.$<HTMLButtonElement>(".btn-auto-screen").hidden = true;
@@ -474,7 +501,7 @@ Do NOT repeat previous observations. Be concise (2-3 sentences max).`;
       seedPipState(
         this._session.analyzer.categories,
         this._session.analyzer.insights,
-        this._session.analyzer.transcript,
+        this._session.transcriptLines,
       );
     }
 

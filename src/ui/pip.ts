@@ -418,16 +418,19 @@ export function rebuildInsightTabs(categories: string[]): void {
 export function seedPipState(
   categories: string[],
   insights: Record<string, string[]>,
-  transcript: string,
+  transcriptLines: Array<{ source: "mic" | "tab"; text: string }>,
 ): void {
   currentCategories = categories;
   currentInsights = insights;
-  if (transcript && doc) {
-    // Seed with raw transcript text (already has [You]/[Them] labels from analyzer)
-    transcriptBuffer.push(transcript);
+  if (transcriptLines.length > 0 && doc) {
+    for (const line of transcriptLines) {
+      const label = line.source === "mic" ? "You" : "Them";
+      transcriptBuffer.push(`${label}: ${line.text}`);
+    }
     const el = doc.getElementById("pip-transcript")!;
     el.classList.remove("italic", "text-base-content/50");
     el.textContent = transcriptBuffer.join("\n");
+    el.scrollTop = el.scrollHeight;
   }
   if (currentView === "insights") renderInsightsView();
 }

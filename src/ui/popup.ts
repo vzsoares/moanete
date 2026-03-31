@@ -406,11 +406,7 @@ async function openPiP(): Promise<void> {
   });
 
   if (session?.analyzer) {
-    seedPipState(
-      session.analyzer.categories,
-      session.analyzer.insights,
-      session.analyzer.transcript,
-    );
+    seedPipState(session.analyzer.categories, session.analyzer.insights, session.transcriptLines);
   }
 
   if (session?.hasVideoTrack) {
