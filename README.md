@@ -1,81 +1,114 @@
 # moanete
 
-Meeting assistant — real-time transcription, LLM-powered insights, and Q&A as a web app with a floating Picture-in-Picture overlay.
+**Your AI meeting copilot** — get real-time transcription, smart insights, and a Q&A chat during any meeting, all from your browser.
 
 > **Moañete** — from the Guarani language: *confirmar / fazer ser verdade*. Used when persuasion is based on proving that something is real or correct.
 
-## How it works
+## Table of Contents
 
-```
-web app (settings + start)
-    │
-    ├── Audio Capture (mic + system audio via Web Audio API)
-    │     └── STT Provider (browser free / Deepgram paid)
-    │           └── onTranscript → Analyzer + PiP overlay
-    │
-    ├── LLM Analyzer (every ~15s) → Insights
-    │
-    └── PiP floating overlay
-          ├── Live transcript bar
-          ├── Insight tabs (Suggestions, Key Points, Action Items, Questions)
-          ├── Chat (Q&A about the meeting)
-          └── Summary (on demand)
-```
+- [What does it do?](#what-does-it-do)
+- [Quick Start (Docker)](#quick-start-docker)
+- [Quick Start (manual)](#quick-start-manual)
+- [Provider options](#provider-options)
+- [Configuration](#configuration)
+- [Development](#development)
+- [MCP Integration](#mcp-integration)
+- [Browser compatibility](#browser-compatibility)
+- [Privacy](#privacy)
 
-1. Open the app → configure providers (or use free defaults)
-2. Click "Start Session" → grants mic permission, starts transcription
-3. Click "Pop Out (PiP)" → floating overlay appears on top of your meeting
-4. The overlay shows live transcript, insights, chat, and summary
+## What does it do?
+
+moanete listens to your meeting (mic and/or system audio), transcribes it in real time, and uses an AI to extract useful insights while the meeting is happening. It runs entirely in your browser — no account required.
+
+**Key features:**
+- Live transcript (who said what)
+- AI-generated insights every ~15 seconds (key points, action items, suggestions, questions)
+- Chat — ask questions about the meeting in real time
+- On-demand summary
+- Floating Picture-in-Picture overlay you can keep on top of your meeting window
+- Session history — review, export, or resume past meetings
+- Fully local & free with Ollama + Whisper, or bring your own API keys
+
+**How to use it:**
+1. Open the app in Chrome
+2. Click **Start Session** — allow mic access when prompted
+3. Click **Pop Out (PiP)** to get a floating overlay on top of your meeting
+4. Talk! The transcript and insights update automatically
+5. Use the **Chat** tab to ask questions, or click **Summarize** when you're done
 
 ## Quick Start (Docker)
 
-One command to get everything running — web app, local STT (Whisper), and local LLM (Ollama):
+> **You need:** [Docker](https://docs.docker.com/get-docker/) installed and running. That's it.
+
+One command gets everything running — the web app, a local speech-to-text engine, and a local AI model:
 
 ```sh
+git clone https://github.com/vzsoares/moanete.git
+cd moanete
 docker compose up --build
 ```
 
-Open **http://localhost:5173** in Chrome. That's it.
+Open **http://localhost:5173** in **Chrome** (other browsers have limited support). That's it!
 
-Ollama auto-pulls `llama3.2` on first start. Whisper uses the `base` model by default. Both are CPU-only in this mode.
+The first run downloads AI models automatically (~2-4 GB), so it may take a few minutes. After that, starts are fast.
 
-### With NVIDIA GPU
+<details>
+<summary>With NVIDIA GPU (faster)</summary>
 
-For faster transcription and inference:
+If you have an NVIDIA GPU and want faster transcription and AI responses:
 
 ```sh
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
 ```
 
-Requires [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html). Uses CUDA for both Whisper and Ollama.
+Requires [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html).
 
-### What's included
+</details>
 
-| Service | URL | Description |
-|---------|-----|-------------|
-| Web app | http://localhost:5173 | moanete dashboard |
-| Whisper | http://localhost:8000 | Local STT (faster-whisper) |
-| Ollama | http://localhost:11434 | Local LLM (llama3.2) |
-| MCP bridge | ws://localhost:3001 | Optional — for AI assistant integration |
+<details>
+<summary>What's running behind the scenes</summary>
 
-### Useful commands
+| Service | URL | What it does |
+|---------|-----|--------------|
+| Web app | http://localhost:5173 | The moanete interface |
+| Whisper | http://localhost:8000 | Converts speech to text (locally) |
+| Ollama | http://localhost:11434 | AI model for insights and chat (locally) |
+| MCP bridge | ws://localhost:3001 | Optional — lets AI coding assistants read your meeting |
+
+</details>
+
+<details>
+<summary>Useful Docker commands</summary>
 
 ```sh
 docker compose up -d              # run in background
 docker compose logs -f app        # follow app logs
 docker compose down                # stop everything
-docker compose down -v             # stop and delete model cache
+docker compose down -v             # stop and delete downloaded models
 ```
 
-## Setup (manual)
+</details>
 
-Requires [Bun](https://bun.sh) and Chrome 116+.
+## Quick Start (manual)
+
+> **You need:** [Bun](https://bun.sh) and **Chrome 116+**.
 
 ```sh
+git clone https://github.com/vzsoares/moanete.git
+cd moanete
 bun install
-bun run dev           # http://localhost:5173
-bun run build         # production build → dist/
+bun run dev           # opens at http://localhost:5173
 ```
+
+This runs the web app only. For AI features, you'll also need an LLM — the easiest free option is [Ollama](https://ollama.com):
+
+```sh
+# In a separate terminal:
+ollama serve
+ollama pull llama3.2
+```
+
+The app auto-detects Ollama at `localhost:11434`. No config needed.
 
 ## Provider options
 
@@ -209,11 +242,17 @@ Configure external servers in `mcp-servers.json`:
 
 Start the MCP server (`just mcp`), then click the **MCP** button in the navbar to browse connected servers and call their tools from the app.
 
-## Requirements
+## Browser compatibility
 
-- [Bun](https://bun.sh) (for building)
-- Chrome 116+ (for Document Picture-in-Picture API)
-- A working microphone
+**Chrome/Edge** is recommended — it has full support for all features (PiP overlay, speech recognition, system audio capture).
+
+| Feature | Chrome/Edge | Firefox | Safari |
+|---------|-------------|---------|--------|
+| Speech-to-text | Full | Behind flag | Partial |
+| System/tab audio | Full | Linux only (PipeWire) | No |
+| PiP overlay | Full (116+) | No | No |
+
+The app detects your browser and shows hints when features are limited.
 
 ## Privacy
 

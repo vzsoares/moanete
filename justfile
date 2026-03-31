@@ -30,7 +30,7 @@ test-e2e:
 
 # Run all checks (lint, format, types, tests, build)
 verify:
-    bun run check && bun run typecheck && bun test && bun run build
+    bun run check && bun run typecheck && bun run test && bun run build
 
 # Start local Whisper STT server (CUDA by default, use device=cpu for no GPU)
 whisper model="base" device="cuda":

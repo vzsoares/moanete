@@ -230,7 +230,7 @@ Ensure the package exports are stable and consumable by the hosted version repo.
 ## Phase 9: Polish & Features
 
 ### README & repo
-- [ ] Add table of contents to README
+- [x] Add table of contents to README
 - [ ] Generate GitHub repo description + topics
 - [ ]  FIX github CI
 
