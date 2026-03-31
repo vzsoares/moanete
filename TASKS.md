@@ -249,3 +249,28 @@ Ensure the package exports are stable and consumable by the hosted version repo.
 - [x] Auto-capture mode (every 5s) — descriptions fed into analyzer context for richer insights
 - [x] Screen captures (image + description + timestamp) saved to session history in IndexedDB
 - [x] Screen captures displayed in history detail view with thumbnails
+- [x] Live screen captures panel in sidebar during active session
+- [x] Screen capture buttons synced between dashboard and PiP
+
+### Chat enhancements
+- [x] Chat presets: Meeting, Code Interview, LeetCode Coach, LeetCode Solve, Lecture, Custom
+- [x] Single Send button — preset mode or Q&A mode based on dropdown selection
+- [x] Markdown rendering in chat responses (code blocks, inline code, bold, italic, lists)
+- [x] Follow-up suggestions (3 clickable chips after each answer)
+- [x] Custom chat prompt configurable from Settings
+- [x] Auto-assist mode — monitors session, speaks only when relevant (configurable interval)
+
+### PiP enhancements
+- [x] Full chat in PiP with presets, markdown rendering, and follow-up suggestions
+- [x] One-time and auto screen capture buttons in PiP
+- [x] Context window usage indicator (bar + percentage)
+- [x] Auto-open PiP on session start (configurable)
+
+### Quality & context
+- [x] Whisper repetition loop detection (drops hallucinated transcripts)
+- [x] Insight language matches configured STT language
+- [x] Dirty flag — analyzer skips when no new input
+- [x] Strict dedup prompts — LLM told to return empty when nothing new
+- [x] Append-only insight rendering (no more full re-render on update)
+- [x] Screen descriptions included in chat Q&A context and summaries
+- [x] Context window usage indicator on dashboard and PiP

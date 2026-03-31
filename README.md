@@ -23,19 +23,21 @@ moanete listens to your meeting (mic and/or system audio), transcribes it in rea
 **Key features:**
 - Live transcript (who said what)
 - AI-generated insights every ~15 seconds (key points, action items, suggestions, questions)
-- Chat — ask questions about the meeting in real time
-- On-demand summary
-- Screen capture analysis — analyze what's on screen (code, slides, whiteboard) with a vision-capable LLM, with auto-capture mode (every 5s) that feeds screen context into insights
-- Floating Picture-in-Picture overlay you can keep on top of your meeting window
+- Chat with presets — Q&A, Meeting briefing, Code Interview coach, LeetCode coach/solver, Lecture notes, or custom prompts
+- Auto-assist mode — AI monitors the session and speaks up only when it has something relevant
+- On-demand summary (transcript + screen content)
+- Screen capture analysis — analyze what's on screen (code, slides, whiteboard) with auto-capture mode that feeds context into insights
+- Floating Picture-in-Picture overlay with full chat, presets, screen capture, and context indicator
 - Session history — review, export, or resume past meetings
 - Fully local & free with Ollama + Whisper, or bring your own API keys
 
 **How to use it:**
 1. Open the app in Chrome
 2. Click **Start Session** — allow mic access when prompted
-3. Click **Pop Out (PiP)** to get a floating overlay on top of your meeting
+3. PiP overlay opens automatically (or click **PiP** in the navbar)
 4. Talk! The transcript and insights update automatically
-5. Use the **Chat** tab to ask questions, or click **Summarize** when you're done
+5. Pick a **chat preset** (Meeting, Code Interview, LeetCode, Lecture) and hit **Send** — or just ask questions in Q&A mode
+6. Toggle **Auto** for hands-free AI commentary
 
 ## Quick Start (Docker)
 
@@ -193,8 +195,8 @@ bun run fix           # biome auto-fix
     │   └── llm/                   # LLM: ollama, openai, anthropic
     └── ui/
         ├── global.css             # Tailwind + DaisyUI + tw-animate-css
-        ├── popup.ts               # Dashboard UI + settings + MCP modal
-        └── pip.ts                 # Minimal PiP floating overlay
+        ├── pip.ts                 # PiP overlay (chat, presets, screen capture, context indicator)
+        └── components/            # Web components (mn-dashboard, mn-chat, mn-insights, etc.)
 ```
 
 ## MCP Integration

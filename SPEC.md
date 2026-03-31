@@ -49,8 +49,24 @@ Uses Vite + Bun + Biome + Tailwind CSS + DaisyUI + tw-animate-css.
     │       └── anthropic.ts       # Paid: Anthropic (needs CORS proxy)
     └── ui/
         ├── global.css             # Tailwind + DaisyUI + tw-animate-css (shared by app + PiP)
-        ├── popup.ts               # Dashboard UI, settings modal, PiP launch
-        └── pip.ts                 # Minimal floating overlay (transcript/insights/summary toggle)
+        ├── base.ts                # MoaneteElement base class (light DOM custom elements)
+        ├── index.ts               # Component barrel — registers all custom elements
+        ├── util.ts                # escapeHtml, renderMarkdown, formatDuration
+        ├── popup.ts               # Legacy dashboard (kept for reference)
+        ├── pip.ts                 # PiP overlay (transcript/insights/summary/chat + screen capture + context indicator)
+        └── components/
+            ├── mn-dashboard.ts    # Full app orchestrator — composes all below
+            ├── mn-transcript.ts   # Scrollable transcript display
+            ├── mn-insights.ts     # Tabbed insight categories (append-only updates)
+            ├── mn-chat.ts         # Chat with presets, auto-assist, markdown, follow-up suggestions
+            ├── mn-summary.ts      # Summary footer with generate button
+            ├── mn-settings.ts     # Full settings dialog
+            ├── mn-history.ts      # Session history list/detail/resume/export
+            ├── mn-screen-captures.ts # Live screen capture thumbnail grid
+            ├── mn-mcp.ts          # MCP servers connect/manage/tools
+            ├── mn-status.ts       # Status dot + text
+            ├── mn-audio-level.ts  # Mic/Tab audio level indicator
+            └── mn-compat-hints.ts # Browser compatibility warnings
 ```
 
 ---
@@ -112,7 +128,7 @@ Pluggable registry pattern — providers register via side-effect imports:
 - Never refuses any topic (politics, legal, medical, personal, explicit)
 - No disclaimers or content warnings added
 
-### Presets
+### Insight presets
 | Preset           | Categories                                        |
 |------------------|---------------------------------------------------|
 | Meeting          | Suggestions, Key Points, Action Items, Questions  |
@@ -120,17 +136,42 @@ Pluggable registry pattern — providers register via side-effect imports:
 | Pair Programming | Bugs, Design Decisions, TODOs, Questions          |
 | Lecture          | Key Concepts, Examples, Questions, References     |
 
+### Context management
+- **Dirty flag** — skips analysis when no new transcript or screen data since last cycle
+- **Strict dedup** — prompts tell LLM to return empty when nothing genuinely new exists
+- **Rolling summary** — older transcript summarized when exceeding 100k char window
+- **Insight output language** — matches configured `sttLanguage`
+- **Whisper loop detection** — drops repetitive hallucinated transcripts (n-gram analysis)
+
 ---
 
 ## 6. Summarization, Q&A & Screen Analysis (`core/summarizer.ts`)
 
-- On-demand transcript summary via LLM
-- Q&A chat with transcript + insights as context
-- Screen capture analysis — captures a frame from the active screen share video track, sends to a vision-capable LLM with transcript context, displays results in the summary panel
+- On-demand transcript + screen summary via LLM
+- Q&A chat with transcript + screen descriptions + insights as context
+- Follow-up suggestions — LLM returns 3 suggested next questions after each answer
+- Screen capture analysis — captures a frame from the active screen share video track, sends to a vision-capable LLM with transcript context
 - Auto-capture mode — captures screen every 5 seconds, generates descriptions, feeds them into analyzer context so insights reflect what's on screen
 - Screen captures (image + description + timestamp) are saved to session history in IndexedDB
 - All LLM providers support multi-modal messages (text + image) for vision analysis
 - Same "court stenographer" system prompts
+
+### Chat presets
+| Preset | Behavior |
+|--------|----------|
+| Q&A (default) | Regular question-answer about the session |
+| Meeting | Structured briefing: overview, decisions, action items, next steps |
+| Code Interview | Interview process coaching: communication, structure, red flags (no code hints) |
+| LeetCode Coach | Socratic algorithm guide: nudges and leading questions, never reveals the answer |
+| LeetCode Solve | Direct solution: optimal approach, working code, complexity analysis |
+| Lecture | Study notes: topic summary, key concepts, formulas, review questions |
+| Custom | User-defined prompt (configured in Settings) |
+
+### Auto-assist mode
+- Toggled via "Auto" button in chat (dashboard + PiP)
+- Periodically sends full context to LLM with selected preset
+- LLM responds only when it has something new/relevant (otherwise `SKIP`)
+- Configurable interval (default 10s)
 
 ---
 
@@ -145,19 +186,26 @@ run in the main window.
 
 ### UI layout
 
-Minimal floating readout — no complex tabs or chat input.
+Compact floating overlay with full feature parity.
 
 ```
 ┌──────────────────────────────┐
-│ moanete              ●mic ●pc│  header + status dots
+│ moanete     ●mic ●tab 📸🔄 ▓│  header + dots + capture btns + context bar
 ├──────────────────────────────┤
-│ [Transcript] [Insights] [Sum]│  view toggle
+│ [Trans] [Insights] [Sum] [Ch]│  view toggle
 ├──────────────────────────────┤
 │                              │
-│ single content area          │  shows selected view
+│ content area                 │  shows selected view
 │                              │
+├──────────────────────────────┤
+│ [preset ▾] [Auto]           │  chat: preset selector + auto-assist
+│ [input...            ] [Send]│  chat: Q&A or preset generate
 └──────────────────────────────┘
 ```
+
+- **Chat tab** — full Q&A with preset dropdown (Meeting, Code Interview, LeetCode Coach, LeetCode Solve, Lecture, Custom), auto-assist toggle, markdown rendering, follow-up suggestions
+- **Screen capture** — one-time (📸) and auto (🔄) buttons, synced with dashboard
+- **Context indicator** — usage bar with color coding (green/yellow/red)
 
 ---
 
@@ -167,7 +215,7 @@ App settings stored in `localStorage`. Session history stored in IndexedDB.
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `sttProvider` | `browser` | `browser` or `deepgram` |
+| `sttProvider` | `browser` | `browser`, `whisper`, `openai-whisper`, or `deepgram` |
 | `llmProvider` | `ollama` | `ollama`, `openai`, or `anthropic` |
 | `ollamaHost` | `http://localhost:11434` | Ollama server URL |
 | `ollamaModel` | `llama3.2` | Ollama text model |
@@ -178,12 +226,19 @@ App settings stored in `localStorage`. Session history stored in IndexedDB.
 | `anthropicModel` | `claude-sonnet-4-20250514` | Anthropic model |
 | `anthropicBaseUrl` | `/api/anthropic` | Proxy URL for CORS |
 | `deepgramApiKey` | *(empty)* | Deepgram API key (BYOK) |
-| `whisperHost` | `http://localhost:8000` | Local Whisper server URL |
+| `whisperHost` | `/whisper` | Local Whisper server URL |
 | `whisperModel` | `base` | Whisper model name |
+| `sttLanguage` | `en-US` | BCP-47 language code (also sets insight output language) |
 | `insightTabs` | `Suggestions,Key Points,...` | Comma-separated categories |
 | `analysisIntervalMs` | `15000` | LLM analysis interval |
+| `multiAgent` | `true` | Parallel per-category analysis |
+| `agentPrompts` | *(empty)* | Custom agent prompts JSON |
 | `captureMic` | `true` | Capture microphone |
 | `captureTab` | `false` | Capture tab/system audio |
+| `autoPip` | `true` | Auto-open PiP on session start |
+| `customChatPrompt` | *(empty)* | System prompt for the Custom chat preset |
+| `autoAssistIntervalMs` | `10000` | Auto-assist check interval |
+| `theme` | `dark` | UI theme |
 
 ---
 
@@ -289,11 +344,12 @@ The UI is built as reusable custom elements (light DOM, no shadow DOM — inheri
 | `<mn-audio-level>` | Mic/Tab audio level indicator |
 | `<mn-compat-hints>` | Browser compatibility warnings |
 | `<mn-transcript>` | Scrollable transcript display |
-| `<mn-chat>` | Chat messages + input |
+| `<mn-chat>` | Chat with presets, auto-assist, markdown rendering, follow-up suggestions |
 | `<mn-summary>` | Summary footer with generate button |
-| `<mn-insights>` | Tabbed insight categories with cards |
+| `<mn-insights>` | Tabbed insight categories with append-only cards |
+| `<mn-screen-captures>` | Live screen capture thumbnail grid (visible during session) |
 | `<mn-settings>` | Full settings dialog |
-| `<mn-history>` | Session history list/detail/resume/export |
+| `<mn-history>` | Session history list/detail/resume/export (with capture count badges) |
 | `<mn-mcp>` | MCP servers connect/manage/tools |
 | `<mn-dashboard>` | Full app orchestrator — composes all above |
 
