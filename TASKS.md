@@ -101,10 +101,13 @@
 ### Whisper STT
 - [x] Fix CORS — Vite proxy `/whisper` → `localhost:8000`, no more cross-origin issues
 
-### Playwright testing
-- [ ] E2e test: open app → start session → verify transcript appears
-- [ ] E2e test: open PiP → verify overlay renders with status indicators
-- [ ] E2e test: settings persist across reload
+### Playwright testing (done)
+- [x] E2e: app loads with all components (Chrome + Firefox)
+- [x] E2e: settings modal — open/close, provider fields, presets, persist across reload
+- [x] E2e: insight tab switching
+- [x] E2e: history/MCP modals render
+- [x] E2e: MCP presets and remote URL form
+- [ ] E2e: start session → verify transcript (needs mic mock)
 
 ---
 
@@ -164,7 +167,7 @@
 - [x] Add GitHub Actions workflow for Biome check
 - [x] Add integration tests with mock providers (Vitest + happy-dom)
 - [x] Test provider abstraction with mock API responses
-- [ ] E2E tests (Playwright)
+- [x] E2E tests — Playwright (Chrome + Firefox, 34 tests)
 
 ---
 

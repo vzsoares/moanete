@@ -24,3 +24,7 @@ Thumbs.db
 
 # MCP server config (contains API tokens)
 mcp-servers.json
+
+# Playwright
+test-results/
+playwright-report/

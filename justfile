@@ -20,9 +20,13 @@ typecheck:
 fix:
     bun run fix
 
-# Run tests
+# Run unit/integration tests
 test:
     bun run test
+
+# Run e2e tests (Chrome + Firefox)
+test-e2e:
+    bun run test:e2e
 
 # Run all checks (lint, format, types, tests, build)
 verify:
