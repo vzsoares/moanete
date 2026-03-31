@@ -115,7 +115,7 @@ Pluggable registry pattern — providers register via side-effect imports:
 | Preset           | Categories                                        |
 |------------------|---------------------------------------------------|
 | Meeting          | Suggestions, Key Points, Action Items, Questions  |
-| Code Interview   | Code Topics, Technical Questions, Red Flags, Strengths |
+| Code Interview   | Solution Approach, Complexity Analysis, Edge Cases, Code Suggestions |
 | Pair Programming | Bugs, Design Decisions, TODOs, Questions          |
 | Lecture          | Key Concepts, Examples, Questions, References     |
 

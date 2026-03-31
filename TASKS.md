@@ -232,13 +232,13 @@ Ensure the package exports are stable and consumable by the hosted version repo.
 ### README & repo
 - [x] Add table of contents to README
 - [ ] Generate GitHub repo description + topics
-- [ ]  FIX github CI
+- [x] FIX github CI
 
 ### Code Interview preset
-- [ ] Add a preset optimized for code interviews — tailored categories and agent prompts
-- [ ] Categories: Solution Approach, Complexity Analysis, Edge Cases, Code Suggestions
-- [ ] Agent prompts tuned to analyze coding questions, suggest algorithms, identify patterns
-- [ ] Add as a preset button in settings
+- [x] Add a preset optimized for code interviews — tailored categories and agent prompts
+- [x] Categories: Solution Approach, Complexity Analysis, Edge Cases, Code Suggestions
+- [x] Agent prompts tuned to analyze coding questions, suggest algorithms, identify patterns
+- [x] Add as a preset button in settings
 
 ### Screen capture & visual analysis
 - [ ] Capture a frame from the active screen share video track

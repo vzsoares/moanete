@@ -2,6 +2,49 @@ import type { Config } from "../../core/config.ts";
 import { MoaneteElement } from "../base.ts";
 import { escapeAttr } from "../util.ts";
 
+const CODE_INTERVIEW_PROMPTS: Record<string, string> = {
+  solution_approach: `You are a coding interview coach analyzing a live transcript. Extract the candidate's solution approach — algorithm choices, data structures mentioned, strategy reasoning, and any pivots in thinking. Respond ONLY with valid JSON.
+
+{ "items": ["solution approach item", ...] }
+
+Rules:
+- Focus on HOW the candidate is solving the problem, not WHAT the problem is.
+- Note when they consider alternatives or change approach.
+- Be concise — one sentence per item max.
+- Do not repeat items already in prior context.`,
+
+  complexity_analysis: `You are a coding interview coach analyzing a live transcript. Extract any mentions of time/space complexity, performance trade-offs, scalability concerns, or Big-O analysis. Respond ONLY with valid JSON.
+
+{ "items": ["complexity item", ...] }
+
+Rules:
+- Capture both correct and incorrect complexity claims (note which).
+- Include trade-off discussions (e.g. "using a hash map trades O(n) space for O(1) lookup").
+- Be concise — one sentence per item max.
+- Do not repeat items already in prior context.`,
+
+  edge_cases: `You are a coding interview coach analyzing a live transcript. Extract edge cases discussed, boundary conditions mentioned, error handling considerations, and any inputs that could break the solution. Respond ONLY with valid JSON.
+
+{ "items": ["edge case item", ...] }
+
+Rules:
+- Include both edge cases the candidate identified AND ones they missed that are obvious from context.
+- Note null/empty inputs, overflow, off-by-one, and concurrency concerns.
+- Be concise — one sentence per item max.
+- Do not repeat items already in prior context.`,
+
+  code_suggestions: `You are a coding interview coach analyzing a live transcript. Suggest code improvements, cleaner patterns, missing optimizations, or alternative implementations based on what the candidate is discussing. Respond ONLY with valid JSON.
+
+{ "items": ["suggestion item", ...] }
+
+Rules:
+- Be constructive — suggest specific improvements, not vague advice.
+- Reference the candidate's actual code or pseudocode when possible.
+- Include language-idiomatic suggestions when the language is known.
+- Be concise — one sentence per item max.
+- Do not repeat items already in prior context.`,
+};
+
 interface DynamicField {
   label: string;
   key: keyof Config;
@@ -140,7 +183,7 @@ export class MnSettings extends MoaneteElement {
               </label>
               <div class="flex flex-wrap gap-1">
                 <button class="btn btn-xs btn-ghost" data-preset="Suggestions,Key Points,Action Items,Questions">Meeting</button>
-                <button class="btn btn-xs btn-ghost" data-preset="Code Topics,Technical Questions,Red Flags,Strengths">Interview</button>
+                <button class="btn btn-xs btn-ghost" data-preset="Solution Approach,Complexity Analysis,Edge Cases,Code Suggestions" data-has-prompts="code-interview">Code Interview</button>
                 <button class="btn btn-xs btn-ghost" data-preset="Bugs,Design Decisions,TODOs,Questions">Pair Programming</button>
                 <button class="btn btn-xs btn-ghost" data-preset="Key Concepts,Examples,Questions,References">Lecture</button>
               </div>
@@ -151,6 +194,10 @@ export class MnSettings extends MoaneteElement {
               <label class="label cursor-pointer gap-2 justify-start">
                 <input type="checkbox" data-key="multiAgent" class="checkbox checkbox-sm" />
                 <span class="label-text text-xs">Multi-agent (parallel analysis per category)</span>
+              </label>
+              <label class="form-control w-full">
+                <div class="label"><span class="label-text text-xs">Agent Prompts (JSON, optional)</span></div>
+                <textarea data-key="agentPrompts" class="textarea textarea-bordered textarea-sm w-full font-mono text-xs" rows="3" placeholder='{"key_points": "Custom prompt..."}'></textarea>
               </label>
             </div>
           </section>
@@ -168,8 +215,16 @@ export class MnSettings extends MoaneteElement {
     // Preset buttons
     for (const btn of this.$$<HTMLButtonElement>("[data-preset]")) {
       btn.addEventListener("click", () => {
-        const input = this.querySelector<HTMLInputElement>('[data-key="insightTabs"]');
-        if (input) input.value = btn.dataset.preset || "";
+        const tabsInput = this.querySelector<HTMLInputElement>('[data-key="insightTabs"]');
+        if (tabsInput) tabsInput.value = btn.dataset.preset || "";
+
+        const promptsArea = this.querySelector<HTMLTextAreaElement>('[data-key="agentPrompts"]');
+        if (promptsArea) {
+          promptsArea.value =
+            btn.dataset.hasPrompts === "code-interview"
+              ? JSON.stringify(CODE_INTERVIEW_PROMPTS, null, 2)
+              : "";
+        }
       });
     }
 
@@ -208,9 +263,9 @@ export class MnSettings extends MoaneteElement {
     if (!this._config) return;
     const cfg = this._config;
 
-    // Selects and text inputs
-    for (const el of this.$$<HTMLSelectElement | HTMLInputElement>(
-      "select[data-key], input[data-key]",
+    // Selects, text inputs, and textareas
+    for (const el of this.$$<HTMLSelectElement | HTMLInputElement | HTMLTextAreaElement>(
+      "select[data-key], input[data-key], textarea[data-key]",
     )) {
       const key = el.dataset.key as keyof Config;
       if (el instanceof HTMLInputElement && el.type === "checkbox") {
@@ -229,8 +284,8 @@ export class MnSettings extends MoaneteElement {
   private _collectValues(): Partial<Config> {
     const partial: Record<string, unknown> = {};
 
-    for (const el of this.$$<HTMLSelectElement | HTMLInputElement>(
-      "select[data-key], input[data-key]",
+    for (const el of this.$$<HTMLSelectElement | HTMLInputElement | HTMLTextAreaElement>(
+      "select[data-key], input[data-key], textarea[data-key]",
     )) {
       const key = el.dataset.key;
       if (!key) continue;
