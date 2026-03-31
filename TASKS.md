@@ -224,3 +224,25 @@ Ensure the package exports are stable and consumable by the hosted version repo.
 
 ### CI
 - [x] Vitest + happy-dom in `just verify` and GitHub Actions (68 tests)
+
+---
+
+## Phase 9: Polish & Features
+
+### README & repo
+- [ ] Add table of contents to README
+- [ ] Generate GitHub repo description + topics
+- [ ]  FIX github CI
+
+### Code Interview preset
+- [ ] Add a preset optimized for code interviews — tailored categories and agent prompts
+- [ ] Categories: Solution Approach, Complexity Analysis, Edge Cases, Code Suggestions
+- [ ] Agent prompts tuned to analyze coding questions, suggest algorithms, identify patterns
+- [ ] Add as a preset button in settings
+
+### Screen capture & visual analysis
+- [ ] Capture a frame from the active screen share video track
+- [ ] Send frame to a vision-capable LLM (GPT-4o, Claude, moondream/Ollama)
+- [ ] Display visual analysis results in the UI (new panel or insight tab)
+- [ ] Add "Analyze Screen" button (visible when screen share is active)
+- [ ] Useful for reading code on screen, whiteboard diagrams, shared slides
