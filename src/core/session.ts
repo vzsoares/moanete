@@ -207,6 +207,11 @@ export class Session {
       this.onActivity?.(source, level);
     };
 
+    // Forward audio warnings to UI
+    this._audio.onWarning = (msg) => {
+      this.onWarning?.(msg);
+    };
+
     // Start audio
     try {
       await this._audio.start({

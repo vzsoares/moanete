@@ -195,8 +195,8 @@ export class MnDashboard extends MoaneteElement {
       this.$<HTMLDivElement>(".audio-indicators").hidden = false;
 
       const cfg = loadConfig();
-      const tabLevel = this.querySelector<MnAudioLevel>(".tab-level");
-      if (tabLevel) tabLevel.hidden = !cfg.captureTab;
+      const tabLevel = this.querySelector<HTMLElement>(".tab-level");
+      if (tabLevel) tabLevel.style.display = cfg.captureTab ? "" : "none";
 
       if (!resumed) {
         this.$<MnTranscript>("mn-transcript").reset();

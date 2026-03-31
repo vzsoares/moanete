@@ -31,6 +31,7 @@ export class AudioCapture {
   private _tabProcessor: ScriptProcessorNode | null = null;
   private _onAudio: ((source: AudioSource, chunk: Float32Array) => void) | null = null;
   private _onActivity: ((source: AudioSource, level: number) => void) | null = null;
+  private _onWarning: ((msg: string) => void) | null = null;
 
   /** Raw tab MediaStream — exposed so STT providers can use it */
   get tabStream(): MediaStream | null {
@@ -48,6 +49,10 @@ export class AudioCapture {
 
   set onActivity(callback: (source: AudioSource, level: number) => void) {
     this._onActivity = callback;
+  }
+
+  set onWarning(callback: (msg: string) => void) {
+    this._onWarning = callback;
   }
 
   async start(opts: AudioCaptureOptions = {}): Promise<void> {
@@ -85,9 +90,11 @@ export class AudioCapture {
       }
 
       if (this._tabStream.getAudioTracks().length === 0) {
-        console.warn(
-          "[audio] No audio tracks from getDisplayMedia — user may not have shared audio",
-        );
+        const isFirefox = navigator.userAgent.includes("Firefox");
+        const msg = isFirefox
+          ? "No audio from screen share — Firefox only captures audio when sharing a browser tab (not a window or screen). On Linux, PipeWire is also required."
+          : "No audio tracks received — make sure to check 'Share tab audio' in the share picker";
+        this._onWarning?.(msg);
         this._tabStream = null;
       } else {
         this._tabProcessor = this._wireSource(this._tabStream, "tab");

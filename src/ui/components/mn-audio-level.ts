@@ -26,7 +26,11 @@ export class MnAudioLevel extends MoaneteElement {
   }
 
   render(): void {
-    this.className = "flex items-center gap-1.5";
+    // Read label from attribute if set in HTML
+    const attrLabel = this.getAttribute("label");
+    if (attrLabel) this._label = attrLabel;
+
+    this.classList.add("flex", "items-center", "gap-1.5");
     this.innerHTML = `
       <span class="level-dot w-2 h-2 rounded-full bg-base-content/20"></span>
       <span class="level-label text-xs text-base-content/50">${this._label}</span>
