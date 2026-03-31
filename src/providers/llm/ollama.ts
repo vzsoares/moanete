@@ -1,4 +1,30 @@
-import { type LLMProvider, registerLLM } from "./types.ts";
+import { type LLMProvider, type MessageContent, registerLLM } from "./types.ts";
+
+interface OllamaMessage {
+  role: string;
+  content: string;
+  images?: string[];
+}
+
+function toOllamaMessages(
+  messages: Array<{ role: string; content: MessageContent }>,
+): OllamaMessage[] {
+  return messages.map((m) => {
+    if (typeof m.content === "string") {
+      return { role: m.role, content: m.content };
+    }
+    // Multi-part content: extract text and images
+    let text = "";
+    const images: string[] = [];
+    for (const part of m.content) {
+      if (part.type === "text") text += part.text;
+      else if (part.type === "image") images.push(part.data);
+    }
+    const msg: OllamaMessage = { role: m.role, content: text };
+    if (images.length > 0) msg.images = images;
+    return msg;
+  });
+}
 
 function createOllamaLLM(): LLMProvider {
   let host = "http://localhost:11434";
@@ -14,9 +40,13 @@ function createOllamaLLM(): LLMProvider {
     },
 
     async chat(messages, opts = {}) {
+      const ollamaMsgs = opts.system
+        ? [{ role: "system", content: opts.system }, ...toOllamaMessages(messages)]
+        : toOllamaMessages(messages);
+
       const payload: Record<string, unknown> = {
         model,
-        messages: opts.system ? [{ role: "system", content: opts.system }, ...messages] : messages,
+        messages: ollamaMsgs,
         stream: false,
         options: { num_predict: opts.maxTokens || 1024 },
       };

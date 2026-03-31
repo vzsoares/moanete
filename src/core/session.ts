@@ -51,6 +51,17 @@ export class Session {
     return this._running;
   }
 
+  /** Whether a screen share video track is available for frame capture */
+  get hasVideoTrack(): boolean {
+    return this._audio?.hasVideoTrack ?? false;
+  }
+
+  /** Capture a frame from the active screen share */
+  async captureFrame(maxWidth = 1024): Promise<string> {
+    if (!this._audio) throw new Error("No active audio capture");
+    return this._audio.captureFrame(maxWidth);
+  }
+
   get summary(): string {
     return this._summary;
   }

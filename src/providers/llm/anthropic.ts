@@ -1,4 +1,22 @@
-import { type LLMProvider, registerLLM } from "./types.ts";
+import { type LLMProvider, type MessageContent, registerLLM } from "./types.ts";
+
+type AnthropicContent =
+  | string
+  | Array<
+      | { type: "text"; text: string }
+      | { type: "image"; source: { type: "base64"; media_type: string; data: string } }
+    >;
+
+function toAnthropicContent(content: MessageContent): AnthropicContent {
+  if (typeof content === "string") return content;
+  return content.map((part) => {
+    if (part.type === "text") return { type: "text" as const, text: part.text };
+    return {
+      type: "image" as const,
+      source: { type: "base64" as const, media_type: part.mediaType, data: part.data },
+    };
+  });
+}
 
 function createAnthropicLLM(): LLMProvider {
   let apiKey = "";
@@ -18,8 +36,15 @@ function createAnthropicLLM(): LLMProvider {
     async chat(messages, opts = {}) {
       if (!apiKey) throw new Error("Anthropic API key not configured");
 
+      const anthropicMsgs = messages.map((m) => ({
+        role: m.role,
+        content: toAnthropicContent(m.content),
+      }));
+
       // Prefill assistant with "{" to force JSON output
-      const msgs = opts.json ? [...messages, { role: "assistant", content: "{" }] : messages;
+      const msgs = opts.json
+        ? [...anthropicMsgs, { role: "assistant", content: "{" }]
+        : anthropicMsgs;
       const body: Record<string, unknown> = {
         model,
         max_tokens: opts.maxTokens || 1024,

@@ -1,6 +1,20 @@
+export interface ImageContent {
+  type: "image";
+  /** Base64-encoded image data (no data: prefix) */
+  data: string;
+  mediaType: "image/png" | "image/jpeg" | "image/webp" | "image/gif";
+}
+
+export interface TextContent {
+  type: "text";
+  text: string;
+}
+
+export type MessageContent = string | Array<TextContent | ImageContent>;
+
 export interface ChatMessage {
   role: string;
-  content: string;
+  content: MessageContent;
 }
 
 export interface ChatOptions {

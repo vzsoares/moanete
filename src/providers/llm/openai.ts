@@ -1,4 +1,19 @@
-import { type LLMProvider, registerLLM } from "./types.ts";
+import { type LLMProvider, type MessageContent, registerLLM } from "./types.ts";
+
+type OpenAIContent =
+  | string
+  | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }>;
+
+function toOpenAIContent(content: MessageContent): OpenAIContent {
+  if (typeof content === "string") return content;
+  return content.map((part) => {
+    if (part.type === "text") return { type: "text" as const, text: part.text };
+    return {
+      type: "image_url" as const,
+      image_url: { url: `data:${part.mediaType};base64,${part.data}` },
+    };
+  });
+}
 
 function createOpenAILLM(): LLMProvider {
   let apiKey = "";
@@ -18,9 +33,16 @@ function createOpenAILLM(): LLMProvider {
     async chat(messages, opts = {}) {
       if (!apiKey) throw new Error("OpenAI API key not configured");
 
+      const openaiMsgs = messages.map((m) => ({
+        role: m.role,
+        content: toOpenAIContent(m.content),
+      }));
+
       const body: Record<string, unknown> = {
         model,
-        messages: opts.system ? [{ role: "system", content: opts.system }, ...messages] : messages,
+        messages: opts.system
+          ? [{ role: "system", content: opts.system }, ...openaiMsgs]
+          : openaiMsgs,
         max_tokens: opts.maxTokens || 1024,
       };
       if (opts.json) body.response_format = { type: "json_object" };

@@ -27,6 +27,7 @@ export class AudioCapture {
   private _ctx: AudioContext | null = null;
   private _micStream: MediaStream | null = null;
   private _tabStream: MediaStream | null = null;
+  private _videoTrack: MediaStreamTrack | null = null;
   private _micProcessor: ScriptProcessorNode | null = null;
   private _tabProcessor: ScriptProcessorNode | null = null;
   private _onAudio: ((source: AudioSource, chunk: Float32Array) => void) | null = null;
@@ -41,6 +42,11 @@ export class AudioCapture {
   /** Raw mic MediaStream — exposed so STT providers can use it */
   get micStream(): MediaStream | null {
     return this._micStream;
+  }
+
+  /** Whether a screen share video track is available for frame capture */
+  get hasVideoTrack(): boolean {
+    return this._videoTrack !== null && this._videoTrack.readyState === "live";
   }
 
   set onAudio(callback: (source: AudioSource, chunk: Float32Array) => void) {
@@ -79,14 +85,15 @@ export class AudioCapture {
 
     if (useTab) {
       // video: true is required to trigger the share picker
-      // we only use the audio track and discard video
       this._tabStream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
         audio: true,
       });
-      // Stop the video track immediately — we don't need it
-      for (const track of this._tabStream.getVideoTracks()) {
-        track.stop();
+      // Keep the first video track for screen capture, stop the rest
+      const videoTracks = this._tabStream.getVideoTracks();
+      if (videoTracks.length > 0) {
+        this._videoTrack = videoTracks[0]!;
+        for (let i = 1; i < videoTracks.length; i++) videoTracks[i]!.stop();
       }
 
       if (this._tabStream.getAudioTracks().length === 0) {
@@ -139,15 +146,57 @@ export class AudioCapture {
     return processor;
   }
 
+  /** Capture a single frame from the screen share video track as a base64 PNG. */
+  async captureFrame(maxWidth = 1024): Promise<string> {
+    if (!this._videoTrack || this._videoTrack.readyState !== "live") {
+      throw new Error("No active screen share video track");
+    }
+
+    // Use ImageCapture if available, fallback to canvas
+    const stream = new MediaStream([this._videoTrack]);
+    const video = document.createElement("video");
+    video.srcObject = stream;
+    video.muted = true;
+    await video.play();
+
+    // Wait for a frame to be available
+    await new Promise<void>((resolve) => {
+      if (video.videoWidth > 0) {
+        resolve();
+        return;
+      }
+      video.addEventListener("loadeddata", () => resolve(), { once: true });
+    });
+
+    const scale = Math.min(1, maxWidth / video.videoWidth);
+    const w = Math.round(video.videoWidth * scale);
+    const h = Math.round(video.videoHeight * scale);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx2d = canvas.getContext("2d")!;
+    ctx2d.drawImage(video, 0, 0, w, h);
+
+    video.pause();
+    video.srcObject = null;
+
+    // Return base64 without the data: prefix
+    const dataUrl = canvas.toDataURL("image/png");
+    return dataUrl.replace(/^data:image\/png;base64,/, "");
+  }
+
   stop(): void {
     this._micProcessor?.disconnect();
     this._tabProcessor?.disconnect();
+    this._videoTrack?.stop();
     for (const t of this._micStream?.getTracks() ?? []) t.stop();
     for (const t of this._tabStream?.getTracks() ?? []) t.stop();
     void this._ctx?.close();
 
     this._micProcessor = null;
     this._tabProcessor = null;
+    this._videoTrack = null;
     this._micStream = null;
     this._tabStream = null;
     this._ctx = null;

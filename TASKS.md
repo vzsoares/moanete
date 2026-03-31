@@ -241,8 +241,8 @@ Ensure the package exports are stable and consumable by the hosted version repo.
 - [x] Add as a preset button in settings
 
 ### Screen capture & visual analysis
-- [ ] Capture a frame from the active screen share video track
-- [ ] Send frame to a vision-capable LLM (GPT-4o, Claude, moondream/Ollama)
-- [ ] Display visual analysis results in the UI (new panel or insight tab)
-- [ ] Add "Analyze Screen" button (visible when screen share is active)
-- [ ] Useful for reading code on screen, whiteboard diagrams, shared slides
+- [x] Capture a frame from the active screen share video track
+- [x] Send frame to a vision-capable LLM (GPT-4o, Claude, moondream/Ollama)
+- [x] Display visual analysis results in the UI (summary panel)
+- [x] Add "Analyze Screen" button (visible when screen share is active)
+- [x] Useful for reading code on screen, whiteboard diagrams, shared slides

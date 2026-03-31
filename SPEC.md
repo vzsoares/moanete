@@ -121,10 +121,12 @@ Pluggable registry pattern — providers register via side-effect imports:
 
 ---
 
-## 6. Summarization & Q&A (`core/summarizer.js`)
+## 6. Summarization, Q&A & Screen Analysis (`core/summarizer.ts`)
 
 - On-demand transcript summary via LLM
 - Q&A chat with transcript + insights as context
+- Screen capture analysis — captures a frame from the active screen share video track, sends to a vision-capable LLM with transcript context, displays results in the summary panel
+- All LLM providers support multi-modal messages (text + image) for vision analysis
 - Same "court stenographer" system prompts
 
 ---

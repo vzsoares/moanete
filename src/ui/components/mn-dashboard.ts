@@ -8,7 +8,7 @@ import {
 } from "../../core/mcp-bridge.ts";
 import { Session, type TranscriptEntry } from "../../core/session.ts";
 import type { StoredSession } from "../../core/storage.ts";
-import { answerQuestion, summarizeTranscript } from "../../core/summarizer.ts";
+import { analyzeScreen, answerQuestion, summarizeTranscript } from "../../core/summarizer.ts";
 import type { ChatMessage } from "../../providers/llm/types.ts";
 import { MoaneteElement } from "../base.ts";
 import {
@@ -58,6 +58,10 @@ export class MnDashboard extends MoaneteElement {
           <button class="btn-start btn btn-primary btn-sm">Start Session</button>
           <button class="btn-stop btn btn-error btn-sm" hidden>Stop</button>
           <button class="btn-pip btn btn-ghost btn-sm" hidden>PiP</button>
+          <button class="btn-screen btn btn-ghost btn-sm gap-1" hidden>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            Analyze Screen
+          </button>
           <button class="btn-mcp btn btn-ghost btn-sm gap-1">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
             MCP
@@ -114,6 +118,7 @@ export class MnDashboard extends MoaneteElement {
     this.$<HTMLButtonElement>(".btn-start").addEventListener("click", () => this._startSession());
     this.$<HTMLButtonElement>(".btn-stop").addEventListener("click", () => this._stopSession());
     this.$<HTMLButtonElement>(".btn-pip").addEventListener("click", () => this._openPiP());
+    this.$<HTMLButtonElement>(".btn-screen").addEventListener("click", () => this._analyzeScreen());
     this.$<HTMLButtonElement>(".btn-settings").addEventListener("click", () =>
       this.$<MnSettings>("mn-settings").open(),
     );
@@ -198,6 +203,9 @@ export class MnDashboard extends MoaneteElement {
       const tabLevel = this.querySelector<HTMLElement>(".tab-level");
       if (tabLevel) tabLevel.style.display = cfg.captureTab ? "" : "none";
 
+      // Show "Analyze Screen" button when screen share video track is available
+      this.$<HTMLButtonElement>(".btn-screen").hidden = !this._session?.hasVideoTrack;
+
       if (!resumed) {
         this.$<MnTranscript>("mn-transcript").reset();
       }
@@ -214,6 +222,7 @@ export class MnDashboard extends MoaneteElement {
     this.$<HTMLButtonElement>(".btn-start").hidden = false;
     this.$<HTMLButtonElement>(".btn-stop").hidden = true;
     this.$<HTMLButtonElement>(".btn-pip").hidden = true;
+    this.$<HTMLButtonElement>(".btn-screen").hidden = true;
     this.$<HTMLDivElement>(".audio-indicators").hidden = true;
     this._pipWindow?.close();
   }
@@ -257,6 +266,22 @@ export class MnDashboard extends MoaneteElement {
       pushSummary(text);
     } catch (e) {
       summary.setSummary(`Error: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
+  private async _analyzeScreen(): Promise<void> {
+    if (!this._session?.llm || !this._session.hasVideoTrack) return;
+
+    const summary = this.$<MnSummary>("mn-summary");
+    summary.setLoading();
+
+    try {
+      const frameBase64 = await this._session.captureFrame();
+      const transcript = this._session.analyzer?.transcript ?? "";
+      const result = await analyzeScreen(this._session.llm, frameBase64, transcript);
+      summary.setSummary(result);
+    } catch (e) {
+      summary.setSummary(`Screen analysis error: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 

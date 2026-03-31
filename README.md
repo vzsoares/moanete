@@ -25,6 +25,7 @@ moanete listens to your meeting (mic and/or system audio), transcribes it in rea
 - AI-generated insights every ~15 seconds (key points, action items, suggestions, questions)
 - Chat — ask questions about the meeting in real time
 - On-demand summary
+- Screen capture analysis — analyze what's on screen (code, slides, whiteboard) with a vision-capable LLM
 - Floating Picture-in-Picture overlay you can keep on top of your meeting window
 - Session history — review, export, or resume past meetings
 - Fully local & free with Ollama + Whisper, or bring your own API keys
