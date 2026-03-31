@@ -273,7 +273,11 @@ export class MnDashboard extends MoaneteElement {
     const summary = this.$<MnSummary>("mn-summary");
     summary.setLoading();
     try {
-      const text = await summarizeTranscript(this._session.llm, this._session.analyzer.transcript);
+      const text = await summarizeTranscript(
+        this._session.llm,
+        this._session.analyzer.transcript,
+        this._session.analyzer.screenDescriptions,
+      );
       summary.setSummary(text);
       this._session.summary = text;
       pushSummary(text);
@@ -396,7 +400,11 @@ export class MnDashboard extends MoaneteElement {
   private async _handlePipSummarize(): Promise<void> {
     if (!this._session?.llm || !this._session.analyzer) return;
     try {
-      const text = await summarizeTranscript(this._session.llm, this._session.analyzer.transcript);
+      const text = await summarizeTranscript(
+        this._session.llm,
+        this._session.analyzer.transcript,
+        this._session.analyzer.screenDescriptions,
+      );
       pipSetSummary(text);
     } catch (e) {
       pipSetSummary(`Error: ${e instanceof Error ? e.message : String(e)}`);

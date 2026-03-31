@@ -368,7 +368,11 @@ function setupSummary(): void {
     el.className = "text-sm leading-relaxed flex-1 max-h-24 overflow-y-auto";
 
     try {
-      const summary = await summarizeTranscript(session.llm, session.analyzer.transcript);
+      const summary = await summarizeTranscript(
+        session.llm,
+        session.analyzer.transcript,
+        session.analyzer.screenDescriptions,
+      );
       el.textContent = summary;
       session.summary = summary;
       pushSummary(summary);
@@ -429,7 +433,11 @@ async function handlePipChat(question: string, history: ChatMessage[]): Promise<
 async function handlePipSummarize(): Promise<void> {
   if (!session?.llm || !session.analyzer) return;
   try {
-    const summary = await summarizeTranscript(session.llm, session.analyzer.transcript);
+    const summary = await summarizeTranscript(
+      session.llm,
+      session.analyzer.transcript,
+      session.analyzer.screenDescriptions,
+    );
     pipSetSummary(summary);
   } catch (e) {
     pipSetSummary(`Error: ${e instanceof Error ? e.message : String(e)}`);

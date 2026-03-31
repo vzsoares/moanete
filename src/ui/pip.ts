@@ -163,7 +163,7 @@ function renderInsightsView(): void {
     } else {
       const list = doc.createElement("div");
       list.className = "flex flex-col gap-1.5";
-      for (const item of items.slice(-5)) {
+      for (const item of items.slice(-10)) {
         const card = doc.createElement("div");
         card.className = "bg-base-200 rounded px-2 py-1 leading-snug border-l-2 border-primary";
         card.textContent = item;

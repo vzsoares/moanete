@@ -36,13 +36,28 @@ Use the provided context (transcript and extracted insights) to answer.
 If you don't have enough information, say so honestly.
 Be concise.`;
 
-export async function summarizeTranscript(llm: LLMProvider, transcript: string): Promise<string> {
-  if (!transcript.trim()) return "No transcript available yet.";
+export async function summarizeTranscript(
+  llm: LLMProvider,
+  transcript: string,
+  screenDescriptions: string[] = [],
+): Promise<string> {
+  const hasTranscript = transcript.trim().length > 0;
+  const hasScreens = screenDescriptions.length > 0;
+  if (!hasTranscript && !hasScreens) return "No transcript or screen data available yet.";
 
-  return llm.chat(
-    [{ role: "user", content: `Summarize this meeting transcript:\n\n${transcript}` }],
-    { system: SUMMARIZE_SYSTEM, maxTokens: 1024 },
-  );
+  const parts: string[] = [];
+  if (hasTranscript) {
+    parts.push(`## Transcript\n${transcript}`);
+  }
+  if (hasScreens) {
+    const screens = screenDescriptions.map((d, i) => `[Screen ${i + 1}] ${d}`).join("\n");
+    parts.push(`## Screen content captured during the session\n${screens}`);
+  }
+
+  return llm.chat([{ role: "user", content: `Summarize this session:\n\n${parts.join("\n\n")}` }], {
+    system: SUMMARIZE_SYSTEM,
+    maxTokens: 1024,
+  });
 }
 
 export interface QAResult {

@@ -176,6 +176,10 @@ export class Analyzer {
     return this._chunks.map((c) => c.text).join(" ");
   }
 
+  get screenDescriptions(): string[] {
+    return [...this._screenDescriptions];
+  }
+
   set onUpdate(callback: (insights: Record<string, string[]>) => void) {
     this._onUpdate = callback;
   }
@@ -341,7 +345,7 @@ export class Analyzer {
   // ── Analysis ────────────────────────────────────────────────────────
 
   private async _analyze(): Promise<void> {
-    if (this._chunks.length === 0) return;
+    if (this._chunks.length === 0 && this._screenDescriptions.length === 0) return;
 
     // Update rolling summary if needed (runs in parallel-safe way)
     await this._maybeUpdateSummary();
