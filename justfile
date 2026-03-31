@@ -74,7 +74,8 @@ docker-gpu-up:
 
 # Stop Docker
 docker-down:
-    docker compose down
+    docker compose --profile ollama down
+    docker network prune -f
 
 # Docker logs
 docker-logs service="app":

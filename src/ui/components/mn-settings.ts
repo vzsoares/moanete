@@ -57,6 +57,9 @@ const STT_FIELDS: Record<string, DynamicField[]> = {
     { label: "Whisper Server URL", key: "whisperHost", placeholder: "/whisper" },
     { label: "Whisper Model", key: "whisperModel", placeholder: "base" },
   ],
+  "openai-whisper": [
+    { label: "OpenAI API Key", key: "openaiApiKey", type: "password", placeholder: "sk-..." },
+  ],
   deepgram: [
     { label: "Deepgram API Key", key: "deepgramApiKey", type: "password", placeholder: "dg_..." },
   ],
@@ -149,6 +152,7 @@ export class MnSettings extends MoaneteElement {
                 <select data-key="sttProvider" class="select select-bordered select-sm w-full">
                   <option value="browser">Browser (free)</option>
                   <option value="whisper">Whisper (local)</option>
+                  <option value="openai-whisper">OpenAI Whisper</option>
                   <option value="deepgram">Deepgram</option>
                 </select>
               </label>

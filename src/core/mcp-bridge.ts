@@ -9,6 +9,8 @@ const BRIDGE_URL = "ws://localhost:3001";
 let ws: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let requestId = 0;
+/** Whether the user has explicitly triggered an MCP action (connect, query, etc.) */
+let userActivated = false;
 const pendingRequests = new Map<
   string,
   { resolve: (v: unknown) => void; reject: (e: Error) => void }
@@ -21,9 +23,10 @@ function send(type: string, data: unknown): void {
 }
 
 function request<T>(type: string, data?: unknown): Promise<T> {
+  ensureConnected();
   return new Promise((resolve, reject) => {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
-      reject(new Error("MCP bridge not connected"));
+      reject(new Error("MCP bridge not connected — start it with: just mcp"));
       return;
     }
     const id = String(++requestId);
@@ -55,8 +58,15 @@ function handleResponse(msg: { type: string; id: string; data?: unknown; error?:
   }
 }
 
+/** Called on app init — no-op. Connection is lazy. */
 export function connectBridge(): void {
-  if (ws?.readyState === WebSocket.OPEN) return;
+  // Intentionally empty — connection happens on first MCP action
+  // or when push functions detect a session is running.
+}
+
+/** Actually open the WebSocket connection. */
+function doConnect(): void {
+  if (ws?.readyState === WebSocket.OPEN || ws?.readyState === WebSocket.CONNECTING) return;
 
   ws = new WebSocket(BRIDGE_URL);
 
@@ -86,18 +96,25 @@ export function connectBridge(): void {
 
   ws.onclose = () => {
     ws = null;
-    // Reject pending requests
     for (const [, pending] of pendingRequests) {
       pending.reject(new Error("MCP bridge disconnected"));
     }
     pendingRequests.clear();
-    // Silent reconnect — MCP server may not be running
-    reconnectTimer = setTimeout(connectBridge, 5000);
+    // Only auto-reconnect if the user has explicitly used MCP
+    if (userActivated) {
+      reconnectTimer = setTimeout(doConnect, 5000);
+    }
   };
 
   ws.onerror = () => {
-    // Suppress errors — bridge is optional
+    // Suppress — bridge is optional
   };
+}
+
+/** Ensure connected, activating persistent reconnect. */
+function ensureConnected(): void {
+  userActivated = true;
+  doConnect();
 }
 
 export function disconnectBridge(): void {

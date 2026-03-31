@@ -15,15 +15,18 @@ let currentView: "transcript" | "insights" | "summary" = "transcript";
 let currentInsights: Record<string, string[]> = {};
 let currentCategories: string[] = [];
 let onSummarize: (() => void) | null = null;
+let onToggleAutoCapture: (() => boolean) | null = null;
 
 export interface PipCallbacks {
   onChat: (question: string, history: ChatMessage[]) => void;
   onSummarize: () => void;
+  onToggleAutoCapture: () => boolean;
 }
 
 export function buildPipUI(pipDoc: Document, _cssUrl: string, callbacks: PipCallbacks): void {
   doc = pipDoc;
   onSummarize = callbacks.onSummarize;
+  onToggleAutoCapture = callbacks.onToggleAutoCapture;
   transcriptBuffer.length = 0;
   currentInsights = {};
   currentCategories = [];
@@ -44,6 +47,7 @@ export function buildPipUI(pipDoc: Document, _cssUrl: string, callbacks: PipCall
       <span id="pip-mic-dot" class="w-2 h-2 rounded-full bg-base-content/20" title="Mic"></span>
       <span class="text-[10px] text-base-content/40">tab</span>
       <span id="pip-tab-dot" class="w-2 h-2 rounded-full bg-base-content/20" title="Tab"></span>
+      <button id="pip-btn-screen" class="btn btn-ghost btn-xs" hidden title="Auto-capture screen">📷</button>
     </header>
 
     <div class="flex gap-1 px-3 py-1 bg-base-300 border-b border-base-content/10 shrink-0">
@@ -64,11 +68,28 @@ export function buildPipUI(pipDoc: Document, _cssUrl: string, callbacks: PipCall
 
   setupViewToggle();
   setupPipSummary();
+  setupScreenCapture();
 }
 
 export function destroyPipUI(): void {
   doc = null;
   onSummarize = null;
+  onToggleAutoCapture = null;
+}
+
+/** Show or hide the screen capture button in PiP. */
+export function pipSetScreenAvailable(available: boolean, active = false): void {
+  if (!doc) return;
+  const btn = doc.getElementById("pip-btn-screen");
+  if (!btn) return;
+  (btn as HTMLButtonElement).hidden = !available;
+  if (active) {
+    btn.classList.add("btn-accent");
+    btn.classList.remove("btn-ghost");
+  } else {
+    btn.classList.remove("btn-accent");
+    btn.classList.add("btn-ghost");
+  }
 }
 
 function syncView(): void {
@@ -107,6 +128,15 @@ function setupPipSummary(): void {
     if (!doc) return;
     doc.getElementById("pip-summary-text")!.textContent = "Generating...";
     onSummarize?.();
+  });
+}
+
+function setupScreenCapture(): void {
+  if (!doc) return;
+  doc.getElementById("pip-btn-screen")!.addEventListener("click", () => {
+    if (!onToggleAutoCapture) return;
+    const nowActive = onToggleAutoCapture();
+    pipSetScreenAvailable(true, nowActive);
   });
 }
 

@@ -40,7 +40,8 @@ Uses Vite + Bun + Biome + Tailwind CSS + DaisyUI + tw-animate-css.
     │   │   ├── types.ts           # STT provider interface + registry
     │   │   ├── browser.ts         # Free: webkitSpeechRecognition (mic only)
     │   │   ├── whisper.ts         # Free: local Whisper server (mic + tab)
-    │   │   └── deepgram.ts        # Paid: Deepgram WebSocket streaming (mic + tab)
+    │   │   ├── openai-whisper.ts  # BYOK: OpenAI Whisper API (mic + tab)
+    │   │   └── deepgram.ts        # BYOK: Deepgram WebSocket streaming (mic + tab)
     │   └── llm/
     │       ├── types.ts           # LLM provider interface + registry
     │       ├── ollama.ts          # Free: local Ollama
@@ -69,7 +70,7 @@ Uses Vite + Bun + Biome + Tailwind CSS + DaisyUI + tw-animate-css.
 | Provider type | STT | LLM | Cost |
 |---------------|-----|-----|------|
 | Local | Browser `webkitSpeechRecognition`, local Whisper server | Ollama | Free |
-| External (BYOK) | Deepgram (user's API key) | OpenAI / Anthropic (user's API key) | Pay-per-use to provider |
+| External (BYOK) | OpenAI Whisper, Deepgram (user's API key) | OpenAI / Anthropic (user's API key) | Pay-per-use to provider |
 
 ---
 
@@ -82,7 +83,7 @@ Pluggable registry pattern — providers register via side-effect imports:
 // LLM: { name, requiresKey, configure(config), chat(messages, opts) → Promise<string> }
 ```
 
-**STT providers**: `browser` (free, webkitSpeechRecognition), `whisper` (local, OpenAI-compatible endpoint), `deepgram` (WebSocket streaming)
+**STT providers**: `browser` (free, webkitSpeechRecognition), `whisper` (local, OpenAI-compatible endpoint), `openai-whisper` (OpenAI Whisper API, BYOK), `deepgram` (WebSocket streaming)
 **LLM providers**: `ollama` (local), `openai`, `anthropic` (needs CORS proxy for hosted)
 
 ---

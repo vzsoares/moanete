@@ -16,6 +16,7 @@ import {
   destroyPipUI,
   pipAppendTranscript,
   setChatReply as pipSetChatReply,
+  pipSetScreenAvailable,
   setSummary as pipSetSummary,
   pipUpdateActivity,
   updateInsights as pipUpdateInsights,
@@ -330,7 +331,13 @@ export class MnDashboard extends MoaneteElement {
     buildPipUI(this._pipWindow.document, "", {
       onChat: (question, history) => this._handlePipChat(question, history),
       onSummarize: () => this._handlePipSummarize(),
+      onToggleAutoCapture: () => this._handlePipToggleAutoCapture(),
     });
+
+    // Sync screen capture button visibility
+    if (this._session?.hasVideoTrack) {
+      pipSetScreenAvailable(true, this._session.autoCapturing);
+    }
 
     if (this._session?.analyzer) {
       seedPipState(
@@ -355,6 +362,23 @@ export class MnDashboard extends MoaneteElement {
     } catch (e) {
       pipSetChatReply(`Error: ${e instanceof Error ? e.message : String(e)}`, []);
     }
+  }
+
+  private _handlePipToggleAutoCapture(): boolean {
+    if (!this._session) return false;
+    if (this._session.autoCapturing) {
+      this._session.stopAutoCapture();
+      // Sync dashboard button
+      const btn = this.$<HTMLButtonElement>(".btn-auto-screen");
+      btn.classList.remove("btn-active", "btn-accent");
+      btn.classList.add("btn-ghost");
+      return false;
+    }
+    this._session.startAutoCapture(5000);
+    const btn = this.$<HTMLButtonElement>(".btn-auto-screen");
+    btn.classList.add("btn-active", "btn-accent");
+    btn.classList.remove("btn-ghost");
+    return true;
   }
 
   private async _handlePipSummarize(): Promise<void> {

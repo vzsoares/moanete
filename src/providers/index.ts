@@ -2,6 +2,7 @@
 import "./stt/browser.ts";
 import "./stt/deepgram.ts";
 import "./stt/whisper.ts";
+import "./stt/openai-whisper.ts";
 
 // LLM providers
 import "./llm/ollama.ts";

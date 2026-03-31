@@ -115,7 +115,7 @@ The app auto-detects Ollama at `localhost:11434`. No config needed.
 
 | | Local (free) | External (BYOK) |
 |---|---|---|
-| **STT** | Browser SpeechRecognition, local Whisper server | Deepgram |
+| **STT** | Browser SpeechRecognition, local Whisper server | OpenAI Whisper, Deepgram |
 | **LLM** | Ollama | OpenAI, Anthropic |
 
 No backend needed — all API calls go directly from the browser.
@@ -141,7 +141,7 @@ Settings are configured in the app and stored in `localStorage`.
 
 | Setting | Default | Options |
 |---------|---------|---------|
-| STT Provider | Browser (free) | `browser`, `whisper`, `deepgram` |
+| STT Provider | Browser (free) | `browser`, `whisper`, `openai-whisper`, `deepgram` |
 | LLM Provider | Ollama (local) | `ollama`, `openai`, `anthropic` |
 | Vision Model | llava | Ollama vision model for screen capture (`llava`, `moondream`, `llama3.2-vision`) |
 | Insight Tabs | Suggestions, Key Points, Action Items, Questions | Any comma-separated list |
@@ -189,7 +189,7 @@ bun run fix           # biome auto-fix
     ├── mcp/                       # MCP server + client + WebSocket bridge
     ├── core/                      # Audio capture, analyzer, session, config, storage
     ├── providers/
-    │   ├── stt/                   # STT: browser (free), whisper (local), deepgram
+    │   ├── stt/                   # STT: browser (free), whisper (local), openai-whisper, deepgram
     │   └── llm/                   # LLM: ollama, openai, anthropic
     └── ui/
         ├── global.css             # Tailwind + DaisyUI + tw-animate-css

@@ -33,6 +33,7 @@ function isSimilar(a: string, b: string, threshold = 0.7): boolean {
 import "../providers/stt/browser.ts";
 import "../providers/stt/deepgram.ts";
 import "../providers/stt/whisper.ts";
+import "../providers/stt/openai-whisper.ts";
 import "../providers/llm/ollama.ts";
 import "../providers/llm/openai.ts";
 import "../providers/llm/anthropic.ts";
@@ -132,7 +133,7 @@ export class Session {
               { type: "image", data: image, mediaType: "image/png" },
               {
                 type: "text",
-                text: "Briefly describe what is on screen (code, slides, diagrams, text). 2-3 sentences max.",
+                text: "Extract the TEXT content visible on screen. Focus on: slide titles and bullet points, code and function names, questions or prompts, terminal output, chat messages. Output ONLY the extracted text, no descriptions of layout or visuals. If it's code, include the language.",
               },
             ],
           },
@@ -257,6 +258,7 @@ export class Session {
 
     const sttConfig = {
       apiKey: cfg.deepgramApiKey,
+      openaiApiKey: cfg.openaiApiKey,
       language: cfg.sttLanguage,
       whisperHost: cfg.whisperHost,
       whisperModel: cfg.whisperModel,
@@ -370,11 +372,13 @@ export class Session {
 
   /** Pick the best STT provider for tab audio (needs feedAudio support) */
   private _pickTabSTTProvider(cfg: Config): string | null {
-    // If user chose whisper or deepgram, use the same for tab
+    // If user chose a feedAudio-capable provider, use the same for tab
     if (cfg.sttProvider === "whisper") return "whisper";
+    if (cfg.sttProvider === "openai-whisper" && cfg.openaiApiKey) return "openai-whisper";
     if (cfg.sttProvider === "deepgram" && cfg.deepgramApiKey) return "deepgram";
-    // Browser STT can't do tab audio — fall back to whisper or deepgram
+    // Browser STT can't do tab audio — fall back in order of preference
     if (cfg.whisperHost) return "whisper";
+    if (cfg.openaiApiKey) return "openai-whisper";
     if (cfg.deepgramApiKey) return "deepgram";
     return null;
   }

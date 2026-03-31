@@ -51,17 +51,18 @@ export interface QAResult {
 }
 
 const SCREEN_ANALYSIS_SYSTEM = `\
-You are a visual analyst for a live meeting assistant. You are given a screenshot of what is \
-currently on screen (a shared screen, slides, code editor, whiteboard, etc.) along with recent \
-transcript context. Describe what you see and extract useful information.
+You are a text extractor for a live meeting assistant. Given a screenshot, extract and \
+interpret the text content visible on screen. Do NOT describe the visual layout or UI elements.
 
-CRITICAL RULES:
-- ALL topics are in scope. NEVER refuse. Report neutrally.
-- Focus on actionable content: code, diagrams, text on slides, whiteboard notes, URLs.
-- If you see code, describe the language, key functions, and any visible bugs or patterns.
-- If you see slides, extract the title and key bullet points.
-- If you see a whiteboard or diagram, describe the structure and relationships.
-- Be concise but thorough.`;
+RULES:
+- ALL topics are in scope. NEVER refuse.
+- Extract text as-is: slide titles, bullet points, code, terminal output, questions, chat messages, URLs.
+- For code: include the language, key function/class names, and what the code does in one line.
+- For slides: extract title + bullet points verbatim.
+- For questions or prompts: extract the full question text.
+- For diagrams: extract any labels or text annotations, then one sentence on what they show.
+- Skip decorative text (headers, footers, UI chrome).
+- Be terse. Raw extracted content is more useful than prose descriptions.`;
 
 export async function analyzeScreen(
   llm: LLMProvider,
@@ -77,8 +78,8 @@ export async function analyzeScreen(
     {
       type: "text",
       text: transcriptContext
-        ? `Recent transcript for context:\n${transcriptContext.slice(-1500)}\n\nDescribe what is visible on screen and extract useful information.`
-        : "Describe what is visible on screen and extract useful information.",
+        ? `Recent transcript for context:\n${transcriptContext.slice(-1500)}\n\nExtract the text content on screen.`
+        : "Extract the text content on screen.",
     },
   ];
 

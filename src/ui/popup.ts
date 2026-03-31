@@ -27,6 +27,7 @@ import {
   destroyPipUI,
   pipAppendTranscript,
   setChatReply as pipSetChatReply,
+  pipSetScreenAvailable,
   setSummary as pipSetSummary,
   pipUpdateActivity,
   updateInsights as pipUpdateInsights,
@@ -393,6 +394,7 @@ async function openPiP(): Promise<void> {
   buildPipUI(pipWindow.document, "", {
     onChat: handlePipChat,
     onSummarize: handlePipSummarize,
+    onToggleAutoCapture: handlePipToggleAutoCapture,
   });
 
   if (session?.analyzer) {
@@ -401,6 +403,10 @@ async function openPiP(): Promise<void> {
       session.analyzer.insights,
       session.analyzer.transcript,
     );
+  }
+
+  if (session?.hasVideoTrack) {
+    pipSetScreenAvailable(true, session.autoCapturing);
   }
 
   pipWindow.addEventListener("pagehide", () => {
@@ -428,6 +434,16 @@ async function handlePipSummarize(): Promise<void> {
   } catch (e) {
     pipSetSummary(`Error: ${e instanceof Error ? e.message : String(e)}`);
   }
+}
+
+function handlePipToggleAutoCapture(): boolean {
+  if (!session) return false;
+  if (session.autoCapturing) {
+    session.stopAutoCapture();
+    return false;
+  }
+  session.startAutoCapture(5000);
+  return true;
 }
 
 function buildQAContext(): string {
