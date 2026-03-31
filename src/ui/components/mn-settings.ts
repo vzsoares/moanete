@@ -198,7 +198,7 @@ export class MnSettings extends MoaneteElement {
               </div>
               <label class="form-control w-full">
                 <div class="label"><span class="label-text text-xs">Analysis Interval (seconds)</span></div>
-                <input type="number" data-key="analysisIntervalMs" class="input input-bordered input-sm w-full" min="5" max="120" step="5" />
+                <input type="number" data-key="analysisIntervalMs" data-multiplier="1000" class="input input-bordered input-sm w-full" min="5" max="120" step="5" />
               </label>
               <label class="label cursor-pointer gap-2 justify-start">
                 <input type="checkbox" data-key="multiAgent" class="checkbox checkbox-sm" />
@@ -217,6 +217,10 @@ export class MnSettings extends MoaneteElement {
               <label class="form-control w-full">
                 <div class="label"><span class="label-text text-xs">Custom Chat Preset Prompt</span></div>
                 <textarea data-key="customChatPrompt" class="textarea textarea-bordered textarea-sm w-full font-mono text-xs" rows="4" placeholder="Enter a custom system prompt for the Chat &quot;Custom&quot; preset..."></textarea>
+              </label>
+              <label class="form-control w-full">
+                <div class="label"><span class="label-text text-xs">Auto-Assist Interval (seconds)</span></div>
+                <input type="number" data-key="autoAssistIntervalMs" data-multiplier="1000" class="input input-bordered input-sm w-full" min="5" step="1" />
               </label>
             </div>
           </section>
@@ -287,10 +291,11 @@ export class MnSettings extends MoaneteElement {
       "select[data-key], input[data-key], textarea[data-key]",
     )) {
       const key = el.dataset.key as keyof Config;
+      const multiplier = Number(el.dataset.multiplier) || 0;
       if (el instanceof HTMLInputElement && el.type === "checkbox") {
         el.checked = Boolean(cfg[key]);
-      } else if (key === "analysisIntervalMs") {
-        el.value = String(Number(cfg[key]) / 1000);
+      } else if (multiplier) {
+        el.value = String(Number(cfg[key]) / multiplier);
       } else {
         el.value = String(cfg[key] ?? "");
       }
@@ -308,10 +313,11 @@ export class MnSettings extends MoaneteElement {
     )) {
       const key = el.dataset.key;
       if (!key) continue;
+      const multiplier = Number(el.dataset.multiplier) || 0;
       if (el instanceof HTMLInputElement && el.type === "checkbox") {
         partial[key] = el.checked;
-      } else if (key === "analysisIntervalMs") {
-        partial[key] = (Number(el.value) || 15) * 1000;
+      } else if (multiplier) {
+        partial[key] = (Number(el.value) || 0) * multiplier;
       } else {
         partial[key] = el.value;
       }

@@ -22,15 +22,55 @@ Be concise and actionable. Use the same language as the transcript.`,
   },
   {
     name: "Code Interview",
-    prompt: `You are a coding interview coach observing a live session. Given the full context, produce:
+    prompt: `You are a coding interview process coach. You help the candidate navigate the \
+interview structure, communication, and strategy — NOT solve the problem for them.
 
-1. **Problem Summary** — what problem is being solved
-2. **Approach Analysis** — evaluate the approach (time/space complexity, correctness)
-3. **Hints & Suggestions** — what could improve or what to try next
-4. **Code Review** — if code is visible, point out bugs, edge cases, or optimizations
-5. **Communication** — how well the candidate explains their thought process
+Given the full context (transcript, screen, insights), produce:
 
-Be specific and reference what was actually said or shown.`,
+1. **Stage** — where the candidate is (clarifying, designing, coding, testing, optimizing)
+2. **Communication** — are they thinking aloud? explaining trade-offs? asking good questions?
+3. **Process Tips** — what they should do next procedurally (e.g. "walk through an example before coding", "state your assumptions", "discuss time complexity before optimizing")
+4. **Red Flags** — silence, jumping to code without a plan, not handling edge cases, ignoring interviewer hints
+5. **Talking Points** — suggest things to say out loud to demonstrate thought process
+
+NEVER give code solutions or algorithm hints. Focus purely on interview technique and communication.`,
+  },
+  {
+    name: "LeetCode Coach",
+    prompt: `You are a subtle algorithm coach for a live coding challenge. The candidate is solving \
+a problem and you help them think — but you NEVER give the answer directly.
+
+STRICT RULES:
+- NEVER write solution code. NEVER reveal the optimal algorithm name directly.
+- Give nudges, not answers. Ask leading questions.
+- If they're stuck, hint at the DATA STRUCTURE or PATTERN without naming the specific algorithm.
+- If they have a working brute-force, hint that a better approach exists and what property they could exploit.
+
+Given the full context, produce:
+
+1. **Problem** — one-line restatement of what they're solving
+2. **Current Approach** — what they're trying and its complexity
+3. **Nudge** — a leading question or observation that points toward a better approach without revealing it (e.g. "What if you didn't need to check every pair?" or "Is there a property of sorted arrays you could use here?")
+4. **Edge Cases** — cases they might be missing, framed as questions ("What happens when the input is empty?")
+5. **Complexity Check** — if they haven't discussed it, prompt them to ("What's the time complexity of your current approach?")
+
+Be Socratic. Guide, don't solve.`,
+  },
+  {
+    name: "LeetCode Solve",
+    prompt: `You are a direct algorithm tutor for a live coding challenge. The candidate needs \
+concrete help solving the problem — give them the answer.
+
+Given the full context (transcript, screen, insights), produce:
+
+1. **Problem** — one-line restatement
+2. **Optimal Approach** — name the algorithm/pattern and explain why it works here
+3. **Solution Outline** — step-by-step pseudocode or bullet list of the approach
+4. **Code** — working solution in the language they're using (or Python if unclear), with brief inline comments
+5. **Complexity** — time and space complexity with one-line justification
+6. **Edge Cases** — list cases to handle and how the solution covers them
+
+Be direct and complete. This is a learning tool, not an exam.`,
   },
   {
     name: "Lecture",
@@ -63,6 +103,7 @@ export class MnChat extends MoaneteElement {
           ${presetOptions}
           <option value="custom">Custom</option>
         </select>
+        <button class="chat-auto btn btn-ghost btn-xs" title="Auto-assist: monitor session and speak when relevant">Auto</button>
       </div>
       <div class="chat-messages flex-1 overflow-y-auto p-3 flex flex-col gap-1.5"></div>
       <div class="flex gap-2 p-3 border-t border-base-content/10 shrink-0">
@@ -107,6 +148,38 @@ export class MnChat extends MoaneteElement {
         ? "Extra instructions (optional)..."
         : "Ask about the session...";
     });
+
+    this.$<HTMLButtonElement>(".chat-auto").addEventListener("click", () => {
+      this._toggleAuto();
+    });
+  }
+
+  private _autoActive = false;
+
+  private _toggleAuto(): void {
+    this._autoActive = !this._autoActive;
+    const btn = this.$<HTMLButtonElement>(".chat-auto");
+    if (this._autoActive) {
+      btn.classList.add("btn-accent");
+      btn.classList.remove("btn-ghost");
+      this.emit("mn-chat-auto", { active: true, prompt: this.getPresetPrompt() });
+    } else {
+      btn.classList.remove("btn-accent");
+      btn.classList.add("btn-ghost");
+      this.emit("mn-chat-auto", { active: false, prompt: "" });
+    }
+  }
+
+  get autoActive(): boolean {
+    return this._autoActive;
+  }
+
+  stopAuto(): void {
+    if (!this._autoActive) return;
+    this._autoActive = false;
+    const btn = this.$<HTMLButtonElement>(".chat-auto");
+    btn.classList.remove("btn-accent");
+    btn.classList.add("btn-ghost");
   }
 
   getPresetPrompt(): string {

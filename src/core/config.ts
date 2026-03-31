@@ -21,6 +21,7 @@ export interface Config {
   captureTab: boolean;
   autoPip: boolean;
   customChatPrompt: string;
+  autoAssistIntervalMs: number;
   theme: string;
 }
 
@@ -47,6 +48,7 @@ export const DEFAULTS: Config = {
   captureTab: false,
   autoPip: true,
   customChatPrompt: "",
+  autoAssistIntervalMs: 10000,
   theme: "dark",
 };
 

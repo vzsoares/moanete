@@ -399,6 +399,7 @@ async function openPiP(): Promise<void> {
   buildPipUI(pipWindow.document, "", {
     onChat: handlePipChat,
     onChatGenerate: handlePipChatGenerate,
+    onAutoAssist: () => {}, // Auto-assist handled by dashboard only
     onSummarize: handlePipSummarize,
     onToggleAutoCapture: handlePipToggleAutoCapture,
     onCaptureOnce: handlePipCaptureOnce,

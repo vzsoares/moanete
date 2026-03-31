@@ -22,11 +22,14 @@ let onToggleAutoCapture: (() => boolean) | null = null;
 let onCaptureOnce: (() => void) | null = null;
 let onChat: ((question: string, history: ChatMessage[]) => void) | null = null;
 let onChatGenerate: ((prompt: string) => void) | null = null;
+let onAutoAssist: ((active: boolean, prompt: string) => void) | null = null;
 let chatHistory: ChatMessage[] = [];
+let pipAutoActive = false;
 
 export interface PipCallbacks {
   onChat: (question: string, history: ChatMessage[]) => void;
   onChatGenerate: (prompt: string) => void;
+  onAutoAssist: (active: boolean, prompt: string) => void;
   onSummarize: () => void;
   onToggleAutoCapture: () => boolean;
   onCaptureOnce: () => void;
@@ -39,6 +42,8 @@ export function buildPipUI(pipDoc: Document, _cssUrl: string, callbacks: PipCall
   onCaptureOnce = callbacks.onCaptureOnce;
   onChat = callbacks.onChat;
   onChatGenerate = callbacks.onChatGenerate;
+  onAutoAssist = callbacks.onAutoAssist;
+  pipAutoActive = false;
   chatHistory = [];
   transcriptBuffer.length = 0;
   currentInsights = {};
@@ -87,9 +92,12 @@ export function buildPipUI(pipDoc: Document, _cssUrl: string, callbacks: PipCall
       <div id="pip-chat" class="hidden flex flex-col h-full">
         <div id="pip-chat-messages" class="flex-1 overflow-y-auto flex flex-col gap-1.5 mb-2"></div>
         <div class="flex flex-col gap-1 shrink-0">
-          <select id="pip-chat-preset" class="select select-bordered select-xs w-full">
-            <option value="">Q&A</option>
-          </select>
+          <div class="flex gap-1">
+            <select id="pip-chat-preset" class="select select-bordered select-xs flex-1">
+              <option value="">Q&A</option>
+            </select>
+            <button id="pip-chat-auto" class="btn btn-ghost btn-xs shrink-0" title="Auto-assist">Auto</button>
+          </div>
           <div class="flex gap-1">
             <input type="text" id="pip-chat-input" class="input input-bordered input-xs flex-1 min-w-0" placeholder="Ask..." />
             <button id="pip-chat-send" class="btn btn-primary btn-xs shrink-0">Send</button>
@@ -112,6 +120,8 @@ export function destroyPipUI(): void {
   onCaptureOnce = null;
   onChat = null;
   onChatGenerate = null;
+  onAutoAssist = null;
+  pipAutoActive = false;
   chatHistory = [];
 }
 
@@ -240,6 +250,20 @@ function setupPipChat(): void {
 
   preset.addEventListener("change", () => {
     input.placeholder = preset.value ? "Extra instructions (optional)..." : "Ask...";
+  });
+
+  const autoBtn = doc.getElementById("pip-chat-auto") as HTMLButtonElement;
+  autoBtn.addEventListener("click", () => {
+    pipAutoActive = !pipAutoActive;
+    if (pipAutoActive) {
+      autoBtn.classList.add("btn-accent");
+      autoBtn.classList.remove("btn-ghost");
+      onAutoAssist?.(true, getPipPresetPrompt(preset));
+    } else {
+      autoBtn.classList.remove("btn-accent");
+      autoBtn.classList.add("btn-ghost");
+      onAutoAssist?.(false, "");
+    }
   });
 }
 

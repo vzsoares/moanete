@@ -39,6 +39,9 @@ export class MnDashboard extends MoaneteElement {
   private _session: Session | null = null;
   private _chatHistory: ChatMessage[] = [];
   private _pipWindow: Window | null = null;
+  private _autoAssistTimer: ReturnType<typeof setInterval> | null = null;
+  private _autoAssistPrompt = "";
+  private _lastAutoContext = "";
 
   /** Hook: called before session starts. Return false to block. */
   beforeSessionStart: (() => Promise<boolean> | boolean) | null = null;
@@ -169,6 +172,13 @@ export class MnDashboard extends MoaneteElement {
       this._handleChatGenerate(e.detail.prompt);
     }) as EventListener);
 
+    // Chat auto-assist toggle
+    this.addEventListener("mn-chat-auto", ((
+      e: CustomEvent<{ active: boolean; prompt: string }>,
+    ) => {
+      this._handleAutoAssist(e.detail.active, e.detail.prompt);
+    }) as EventListener);
+
     // Summary
     this.addEventListener("mn-summarize", () => this._handleSummarize());
 
@@ -258,6 +268,8 @@ export class MnDashboard extends MoaneteElement {
     this.$<HTMLDivElement>(".audio-indicators").hidden = true;
     this.$<HTMLDivElement>(".context-indicator").hidden = true;
     this.$<MnScreenCaptures>("mn-screen-captures").clear();
+    this.$<MnChat>("mn-chat").stopAuto();
+    this._handleAutoAssist(false, "");
     this._pipWindow?.close();
   }
 
@@ -272,6 +284,54 @@ export class MnDashboard extends MoaneteElement {
       stored.transcript.map((l) => ({ source: l.source, text: l.text })),
     );
     await this._startSession(true);
+  }
+
+  private _handleAutoAssist(active: boolean, prompt: string): void {
+    if (this._autoAssistTimer) {
+      clearInterval(this._autoAssistTimer);
+      this._autoAssistTimer = null;
+    }
+    if (!active) {
+      this._autoAssistPrompt = "";
+      this._lastAutoContext = "";
+      return;
+    }
+    this._autoAssistPrompt = prompt;
+    this._lastAutoContext = "";
+    const intervalMs = loadConfig().autoAssistIntervalMs || 10_000;
+    this._runAutoAssist();
+    this._autoAssistTimer = setInterval(() => this._runAutoAssist(), intervalMs);
+  }
+
+  private async _runAutoAssist(): Promise<void> {
+    if (!this._session?.llm || !this._session.analyzer) return;
+
+    const context = this._buildQAContext();
+    // Skip if context hasn't changed
+    if (context === this._lastAutoContext) return;
+    this._lastAutoContext = context;
+
+    const basePrompt = this._autoAssistPrompt || "";
+    const system = `${basePrompt ? `${basePrompt}\n\n` : ""}You are monitoring a live session. You will be called periodically with updated context. \
+ONLY respond if you have something NEW, RELEVANT, and USEFUL to share — a key observation, \
+a suggestion, a warning, or an answer to something being discussed. \
+If there is nothing worth saying right now, respond with exactly: SKIP\n\
+Do NOT repeat previous observations. Be concise (2-3 sentences max).`;
+
+    try {
+      const result = await this._session.llm.chat([{ role: "user", content: context }], {
+        system,
+        maxTokens: 300,
+      });
+
+      const trimmed = result.trim();
+      if (trimmed === "SKIP" || trimmed.startsWith("SKIP")) return;
+
+      this.$<MnChat>("mn-chat").appendMessage("assistant", trimmed);
+      pipSetChatReply(trimmed, []);
+    } catch {
+      // Silent — auto-assist shouldn't show errors
+    }
   }
 
   private async _handleChatGenerate(prompt: string): Promise<void> {
@@ -399,6 +459,7 @@ export class MnDashboard extends MoaneteElement {
     buildPipUI(this._pipWindow.document, "", {
       onChat: (question, history) => this._handlePipChat(question, history),
       onChatGenerate: (prompt) => this._handleChatGenerate(prompt),
+      onAutoAssist: (active, prompt) => this._handleAutoAssist(active, prompt),
       onSummarize: () => this._handlePipSummarize(),
       onToggleAutoCapture: () => this._handlePipToggleAutoCapture(),
       onCaptureOnce: () => this._handlePipCaptureOnce(),
