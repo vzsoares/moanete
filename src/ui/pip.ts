@@ -14,10 +14,9 @@ import { escapeHtml, renderMarkdown } from "./util.ts";
 
 let doc: Document | null = null;
 const transcriptBuffer: string[] = [];
-let currentView: "transcript" | "insights" | "summary" | "chat" = "transcript";
+let currentView: "transcript" | "insights" | "chat" = "transcript";
 let currentInsights: Record<string, string[]> = {};
 let currentCategories: string[] = [];
-let onSummarize: (() => void) | null = null;
 let onToggleAutoCapture: (() => boolean) | null = null;
 let onCaptureOnce: (() => void) | null = null;
 let onChat: ((question: string, history: ChatMessage[]) => void) | null = null;
@@ -30,14 +29,12 @@ export interface PipCallbacks {
   onChat: (question: string, history: ChatMessage[]) => void;
   onChatGenerate: (prompt: string) => void;
   onAutoAssist: (active: boolean, prompt: string) => void;
-  onSummarize: () => void;
   onToggleAutoCapture: () => boolean;
   onCaptureOnce: () => void;
 }
 
 export function buildPipUI(pipDoc: Document, _cssUrl: string, callbacks: PipCallbacks): void {
   doc = pipDoc;
-  onSummarize = callbacks.onSummarize;
   onToggleAutoCapture = callbacks.onToggleAutoCapture;
   onCaptureOnce = callbacks.onCaptureOnce;
   onChat = callbacks.onChat;
@@ -78,17 +75,12 @@ export function buildPipUI(pipDoc: Document, _cssUrl: string, callbacks: PipCall
     <div class="flex gap-1 px-3 py-1 bg-base-300 border-b border-base-content/10 shrink-0">
       <button class="btn btn-xs btn-primary" data-view="transcript">Transcript</button>
       <button class="btn btn-xs btn-ghost" data-view="insights">Insights</button>
-      <button class="btn btn-xs btn-ghost" data-view="summary">Summary</button>
       <button class="btn btn-xs btn-ghost" data-view="chat">Chat</button>
     </div>
 
     <div id="pip-content" class="flex-1 overflow-y-auto p-3">
       <div id="pip-transcript" class="text-xs leading-relaxed whitespace-pre-wrap text-base-content/50 italic">Waiting for speech...</div>
       <div id="pip-insights" class="hidden text-xs"></div>
-      <div id="pip-summary" class="hidden text-xs leading-relaxed text-base-content/50 italic">
-        <button id="pip-btn-summarize" class="btn btn-ghost btn-xs mb-2">Generate Summary</button>
-        <div id="pip-summary-text">No summary yet.</div>
-      </div>
       <div id="pip-chat" class="hidden flex flex-col h-full">
         <div id="pip-chat-messages" class="flex-1 overflow-y-auto flex flex-col gap-1.5 mb-2"></div>
         <div class="flex flex-col gap-1 shrink-0">
@@ -108,14 +100,12 @@ export function buildPipUI(pipDoc: Document, _cssUrl: string, callbacks: PipCall
   `;
 
   setupViewToggle();
-  setupPipSummary();
   setupScreenCapture();
   setupPipChat();
 }
 
 export function destroyPipUI(): void {
   doc = null;
-  onSummarize = null;
   onToggleAutoCapture = null;
   onCaptureOnce = null;
   onChat = null;
@@ -154,7 +144,6 @@ function syncView(): void {
   const views = {
     transcript: "pip-transcript",
     insights: "pip-insights",
-    summary: "pip-summary",
     chat: "pip-chat",
   };
   for (const [view, id] of Object.entries(views)) {
@@ -178,15 +167,6 @@ function setupViewToggle(): void {
       if (currentView === "insights") renderInsightsView();
     });
   }
-}
-
-function setupPipSummary(): void {
-  if (!doc) return;
-  doc.getElementById("pip-btn-summarize")!.addEventListener("click", () => {
-    if (!doc) return;
-    doc.getElementById("pip-summary-text")!.textContent = "Generating...";
-    onSummarize?.();
-  });
 }
 
 function setupScreenCapture(): void {
@@ -362,11 +342,12 @@ export function updateInsights(insights: Record<string, string[]>): void {
   if (currentView === "insights") renderInsightsView();
 }
 
-let lastPipCtxPct = -1;
+let lastPipCtxLabel = "";
 
-export function pipUpdateContext(pct: number): void {
-  if (!doc || pct === lastPipCtxPct) return;
-  lastPipCtxPct = pct;
+export function pipUpdateContext(pctStr: string): void {
+  if (!doc || pctStr === lastPipCtxLabel) return;
+  lastPipCtxLabel = pctStr;
+  const pct = Number.parseFloat(pctStr);
   const bar = doc.getElementById("pip-ctx-bar");
   const label = doc.getElementById("pip-ctx-label");
   if (bar) {
@@ -375,7 +356,7 @@ export function pipUpdateContext(pct: number): void {
     bar.classList.add(pct >= 85 ? "bg-error" : pct >= 60 ? "bg-warning" : "bg-primary");
   }
   if (label) {
-    label.textContent = `${pct}%`;
+    label.textContent = `${pctStr}%`;
     label.classList.remove("animate-pulse");
     void label.offsetWidth;
     label.classList.add("animate-pulse");
@@ -401,13 +382,6 @@ export function setChatReply(
 ): void {
   chatHistory = history;
   appendPipChatMessage("assistant", answer, suggestions);
-}
-
-export function setSummary(text: string): void {
-  if (!doc) return;
-  const el = doc.getElementById("pip-summary-text")!;
-  el.textContent = typeof text === "string" ? text : String(text);
-  el.classList.remove("italic", "text-base-content/50");
 }
 
 export function rebuildInsightTabs(categories: string[]): void {

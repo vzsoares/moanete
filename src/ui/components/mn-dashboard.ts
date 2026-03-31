@@ -17,7 +17,6 @@ import {
   pipAppendTranscript,
   setChatReply as pipSetChatReply,
   pipSetScreenAvailable,
-  setSummary as pipSetSummary,
   pipUpdateActivity,
   pipUpdateContext,
   updateInsights as pipUpdateInsights,
@@ -32,7 +31,6 @@ import type { MnMcp } from "./mn-mcp.ts";
 import type { MnScreenCaptures } from "./mn-screen-captures.ts";
 import type { MnSettings } from "./mn-settings.ts";
 import type { MnStatus } from "./mn-status.ts";
-import type { MnSummary } from "./mn-summary.ts";
 import type { MnTranscript } from "./mn-transcript.ts";
 
 export class MnDashboard extends MoaneteElement {
@@ -103,8 +101,6 @@ export class MnDashboard extends MoaneteElement {
           <mn-chat></mn-chat>
         </aside>
       </main>
-
-      <mn-summary></mn-summary>
 
       <!-- Modals -->
       <mn-settings></mn-settings>
@@ -178,9 +174,6 @@ export class MnDashboard extends MoaneteElement {
     ) => {
       this._handleAutoAssist(e.detail.active, e.detail.prompt);
     }) as EventListener);
-
-    // Summary
-    this.addEventListener("mn-summarize", () => this._handleSummarize());
 
     // Session resume
     this.addEventListener("mn-session-resume", ((e: CustomEvent<{ session: StoredSession }>) => {
@@ -273,8 +266,6 @@ export class MnDashboard extends MoaneteElement {
           this._session.analyzer.screenDescriptions,
         );
         this._session.summary = text;
-        this.$<MnSummary>("mn-summary").setSummary(text);
-        pipSetSummary(text);
         pushSummary(text);
       } catch {
         // Non-critical — save session without summary
@@ -394,24 +385,6 @@ Do NOT repeat previous observations. Be concise (2-3 sentences max).`;
     }
   }
 
-  private async _handleSummarize(): Promise<void> {
-    if (!this._session?.llm || !this._session.analyzer) return;
-    const summary = this.$<MnSummary>("mn-summary");
-    summary.setLoading();
-    try {
-      const text = await summarizeTranscript(
-        this._session.llm,
-        this._session.analyzer.transcript,
-        this._session.analyzer.screenDescriptions,
-      );
-      summary.setSummary(text);
-      this._session.summary = text;
-      pushSummary(text);
-    } catch (e) {
-      summary.setSummary(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
-
   /** Central toggle — keeps dashboard + PiP buttons in sync. Returns new active state. */
   private _toggleAutoCapture(): boolean {
     if (!this._session) return false;
@@ -450,16 +423,12 @@ Do NOT repeat previous observations. Be concise (2-3 sentences max).`;
   private async _analyzeScreen(): Promise<void> {
     if (!this._session?.visionLlm || !this._session.hasVideoTrack) return;
 
-    const summary = this.$<MnSummary>("mn-summary");
-    summary.setLoading();
-
     try {
       const frameBase64 = await this._session.captureFrame();
       const transcript = this._session.analyzer?.transcript ?? "";
       const result = await analyzeScreen(this._session.visionLlm, frameBase64, transcript);
-      summary.setSummary(result);
 
-      // Store capture and feed to analyzer (same as auto-capture)
+      // Store capture and feed to analyzer
       const capture: ScreenCapture = {
         timestamp: Date.now(),
         image: frameBase64,
@@ -468,7 +437,10 @@ Do NOT repeat previous observations. Be concise (2-3 sentences max).`;
       this._session.addScreenCapture(capture);
       this.$<MnScreenCaptures>("mn-screen-captures").addCapture(capture);
     } catch (e) {
-      summary.setSummary(`Screen analysis error: ${e instanceof Error ? e.message : String(e)}`);
+      this.$<MnStatus>("mn-status").setState(
+        "error",
+        `Screen error: ${e instanceof Error ? e.message : String(e)}`,
+      );
     }
   }
 
@@ -487,7 +459,6 @@ Do NOT repeat previous observations. Be concise (2-3 sentences max).`;
       onChat: (question, history) => this._handlePipChat(question, history),
       onChatGenerate: (prompt) => this._handleChatGenerate(prompt),
       onAutoAssist: (active, prompt) => this._handleAutoAssist(active, prompt),
-      onSummarize: () => this._handlePipSummarize(),
       onToggleAutoCapture: () => this._handlePipToggleAutoCapture(),
       onCaptureOnce: () => this._handlePipCaptureOnce(),
     });
@@ -530,20 +501,6 @@ Do NOT repeat previous observations. Be concise (2-3 sentences max).`;
     this._analyzeScreen();
   }
 
-  private async _handlePipSummarize(): Promise<void> {
-    if (!this._session?.llm || !this._session.analyzer) return;
-    try {
-      const text = await summarizeTranscript(
-        this._session.llm,
-        this._session.analyzer.transcript,
-        this._session.analyzer.screenDescriptions,
-      );
-      pipSetSummary(text);
-    } catch (e) {
-      pipSetSummary(`Error: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
-
   private _buildQAContext(): string {
     const a = this._session?.analyzer;
     if (!a) return "";
@@ -578,7 +535,7 @@ Do NOT repeat previous observations. Be concise (2-3 sentences max).`;
   private _updateContextIndicator(): void {
     const ctx = this._session?.analyzer?.contextSize;
     if (!ctx) return;
-    const pct = Math.round(ctx.ratio * 100);
+    const pct = Math.round(ctx.ratio * 1000) / 10;
     if (pct === this._lastCtxPct) return;
     this._lastCtxPct = pct;
 
@@ -586,7 +543,7 @@ Do NOT repeat previous observations. Be concise (2-3 sentences max).`;
     const label = this.querySelector<HTMLSpanElement>(".context-label");
     if (bar) bar.style.width = `${pct}%`;
     if (label) {
-      label.textContent = `${pct}%`;
+      label.textContent = `${pct.toFixed(1)}%`;
       label.classList.remove("animate-pulse");
       // Force reflow to restart animation
       void label.offsetWidth;
@@ -597,7 +554,7 @@ Do NOT repeat previous observations. Be concise (2-3 sentences max).`;
       bar.classList.remove("bg-primary", "bg-warning", "bg-error");
       bar.classList.add(pct >= 85 ? "bg-error" : pct >= 60 ? "bg-warning" : "bg-primary");
     }
-    pipUpdateContext(pct);
+    pipUpdateContext(pct.toFixed(1));
   }
 }
 

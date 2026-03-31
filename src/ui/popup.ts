@@ -29,7 +29,6 @@ import {
   pipAppendTranscript,
   setChatReply as pipSetChatReply,
   pipSetScreenAvailable,
-  setSummary as pipSetSummary,
   pipUpdateActivity,
   updateInsights as pipUpdateInsights,
   seedPipState,
@@ -400,7 +399,6 @@ async function openPiP(): Promise<void> {
     onChat: handlePipChat,
     onChatGenerate: handlePipChatGenerate,
     onAutoAssist: () => {}, // Auto-assist handled by dashboard only
-    onSummarize: handlePipSummarize,
     onToggleAutoCapture: handlePipToggleAutoCapture,
     onCaptureOnce: handlePipCaptureOnce,
   });
@@ -441,20 +439,6 @@ async function handlePipChatGenerate(prompt: string): Promise<void> {
     pipSetChatReply(result, []);
   } catch (e) {
     pipSetChatReply(`Error: ${e instanceof Error ? e.message : String(e)}`, []);
-  }
-}
-
-async function handlePipSummarize(): Promise<void> {
-  if (!session?.llm || !session.analyzer) return;
-  try {
-    const summary = await summarizeTranscript(
-      session.llm,
-      session.analyzer.transcript,
-      session.analyzer.screenDescriptions,
-    );
-    pipSetSummary(summary);
-  } catch (e) {
-    pipSetSummary(`Error: ${e instanceof Error ? e.message : String(e)}`);
   }
 }
 
