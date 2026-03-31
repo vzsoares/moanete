@@ -1,4 +1,5 @@
 import { MoaneteElement } from "../base.ts";
+import { escapeHtml, renderMarkdown } from "../util.ts";
 
 export class MnChat extends MoaneteElement {
   render(): void {
@@ -33,8 +34,15 @@ export class MnChat extends MoaneteElement {
 
   appendMessage(role: string, text: string): void {
     const el = document.createElement("div");
-    el.className = `text-sm leading-snug ${role === "user" ? "text-info" : "text-success"}`;
-    el.textContent = `${role === "user" ? "You" : "moanete"}: ${text}`;
+    const isUser = role === "user";
+    el.className = `text-sm leading-snug ${isUser ? "text-info" : ""}`;
+
+    if (isUser) {
+      el.innerHTML = `<span class="font-semibold">You:</span> ${escapeHtml(text)}`;
+    } else {
+      el.innerHTML = `<span class="font-semibold text-success">moanete:</span><div class="mt-1">${renderMarkdown(text)}</div>`;
+    }
+
     this.$<HTMLDivElement>(".chat-messages").appendChild(el);
     el.scrollIntoView({ behavior: "smooth" });
   }

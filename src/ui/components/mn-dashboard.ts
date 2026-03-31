@@ -220,6 +220,10 @@ export class MnDashboard extends MoaneteElement {
       if (!resumed) {
         this.$<MnTranscript>("mn-transcript").reset();
       }
+
+      if (cfg.autoPip) {
+        this._openPiP();
+      }
     } catch (e) {
       this.$<MnStatus>("mn-status").setState("error", e instanceof Error ? e.message : String(e));
     }
@@ -286,26 +290,39 @@ export class MnDashboard extends MoaneteElement {
     }
   }
 
-  private _toggleAutoCapture(): void {
-    if (!this._session) return;
-    const btn = this.$<HTMLButtonElement>(".btn-auto-screen");
+  /** Central toggle — keeps dashboard + PiP buttons in sync. Returns new active state. */
+  private _toggleAutoCapture(): boolean {
+    if (!this._session) return false;
 
     if (this._session.autoCapturing) {
       this._session.stopAutoCapture();
-      btn.classList.remove("btn-active", "btn-accent");
-      btn.classList.add("btn-ghost");
-    } else {
-      this._session.onScreenCapture = (capture) => {
-        this.$<MnStatus>("mn-status").setState(
-          "on",
-          `Screen: ${capture.description.slice(0, 60)}...`,
-        );
-        this.$<MnScreenCaptures>("mn-screen-captures").addCapture(capture);
-      };
-      this._session.startAutoCapture(5000);
+      this._syncAutoCaptureBtns(false);
+      return false;
+    }
+
+    this._session.onScreenCapture = (capture) => {
+      this.$<MnStatus>("mn-status").setState(
+        "on",
+        `Screen: ${capture.description.slice(0, 60)}...`,
+      );
+      this.$<MnScreenCaptures>("mn-screen-captures").addCapture(capture);
+    };
+    this._session.startAutoCapture(5000);
+    this._syncAutoCaptureBtns(true);
+    return true;
+  }
+
+  /** Sync auto-capture button states on both dashboard and PiP. */
+  private _syncAutoCaptureBtns(active: boolean): void {
+    const btn = this.$<HTMLButtonElement>(".btn-auto-screen");
+    if (active) {
       btn.classList.add("btn-active", "btn-accent");
       btn.classList.remove("btn-ghost");
+    } else {
+      btn.classList.remove("btn-active", "btn-accent");
+      btn.classList.add("btn-ghost");
     }
+    pipSetScreenAvailable(true, active);
   }
 
   private async _analyzeScreen(): Promise<void> {
@@ -348,6 +365,7 @@ export class MnDashboard extends MoaneteElement {
       onChat: (question, history) => this._handlePipChat(question, history),
       onSummarize: () => this._handlePipSummarize(),
       onToggleAutoCapture: () => this._handlePipToggleAutoCapture(),
+      onCaptureOnce: () => this._handlePipCaptureOnce(),
     });
 
     // Sync screen capture button visibility
@@ -381,20 +399,11 @@ export class MnDashboard extends MoaneteElement {
   }
 
   private _handlePipToggleAutoCapture(): boolean {
-    if (!this._session) return false;
-    if (this._session.autoCapturing) {
-      this._session.stopAutoCapture();
-      // Sync dashboard button
-      const btn = this.$<HTMLButtonElement>(".btn-auto-screen");
-      btn.classList.remove("btn-active", "btn-accent");
-      btn.classList.add("btn-ghost");
-      return false;
-    }
-    this._session.startAutoCapture(5000);
-    const btn = this.$<HTMLButtonElement>(".btn-auto-screen");
-    btn.classList.add("btn-active", "btn-accent");
-    btn.classList.remove("btn-ghost");
-    return true;
+    return this._toggleAutoCapture();
+  }
+
+  private _handlePipCaptureOnce(): void {
+    this._analyzeScreen();
   }
 
   private async _handlePipSummarize(): Promise<void> {

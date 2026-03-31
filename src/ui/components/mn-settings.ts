@@ -141,6 +141,10 @@ export class MnSettings extends MoaneteElement {
                 <input type="checkbox" data-key="captureTab" class="checkbox checkbox-sm" />
                 <span class="label-text text-xs">Tab / System Audio</span>
               </label>
+              <label class="label cursor-pointer gap-2">
+                <input type="checkbox" data-key="autoPip" class="checkbox checkbox-sm" />
+                <span class="label-text text-xs">Auto-open PiP</span>
+              </label>
             </div>
           </section>
 

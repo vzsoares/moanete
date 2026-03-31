@@ -20,7 +20,8 @@ import {
   exportSessionMarkdown,
   listSessions,
 } from "../core/storage.ts";
-import { answerQuestion, summarizeTranscript } from "../core/summarizer.ts";
+import type { ScreenCapture } from "../core/storage.ts";
+import { analyzeScreen, answerQuestion, summarizeTranscript } from "../core/summarizer.ts";
 import type { ChatMessage } from "../providers/llm/types.ts";
 import {
   buildPipUI,
@@ -399,6 +400,7 @@ async function openPiP(): Promise<void> {
     onChat: handlePipChat,
     onSummarize: handlePipSummarize,
     onToggleAutoCapture: handlePipToggleAutoCapture,
+    onCaptureOnce: handlePipCaptureOnce,
   });
 
   if (session?.analyzer) {
@@ -452,6 +454,19 @@ function handlePipToggleAutoCapture(): boolean {
   }
   session.startAutoCapture(5000);
   return true;
+}
+
+async function handlePipCaptureOnce(): Promise<void> {
+  if (!session?.visionLlm || !session.hasVideoTrack) return;
+  try {
+    const frame = await session.captureFrame();
+    const transcript = session.analyzer?.transcript ?? "";
+    const result = await analyzeScreen(session.visionLlm, frame, transcript);
+    const capture: ScreenCapture = { timestamp: Date.now(), image: frame, description: result };
+    session.addScreenCapture(capture);
+  } catch (e) {
+    console.warn("[pip-capture]", e instanceof Error ? e.message : String(e));
+  }
 }
 
 function buildQAContext(): string {

@@ -19,6 +19,7 @@ export interface Config {
   agentPrompts: string;
   captureMic: boolean;
   captureTab: boolean;
+  autoPip: boolean;
   theme: string;
 }
 
@@ -43,6 +44,7 @@ export const DEFAULTS: Config = {
   agentPrompts: "",
   captureMic: true,
   captureTab: false,
+  autoPip: true,
   theme: "dark",
 };
 
