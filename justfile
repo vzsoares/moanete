@@ -20,9 +20,13 @@ typecheck:
 fix:
     bun run fix
 
-# Run all checks (lint, format, types, build)
+# Run tests
+test:
+    bun run test
+
+# Run all checks (lint, format, types, tests, build)
 verify:
-    bun run check && bun run typecheck && bun run build
+    bun run check && bun run typecheck && bun test && bun run build
 
 # Start local Whisper STT server (CUDA by default, use device=cpu for no GPU)
 whisper model="base" device="cuda":

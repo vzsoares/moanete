@@ -133,6 +133,11 @@ export class Analyzer {
     this._transcriptChunks.push(text);
   }
 
+  /** Run analysis immediately (instead of waiting for the timer). */
+  async analyze(): Promise<void> {
+    await this._analyze();
+  }
+
   start(): void {
     this._timer = setInterval(() => this._analyze(), this._intervalMs);
   }

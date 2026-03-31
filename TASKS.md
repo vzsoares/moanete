@@ -102,12 +102,9 @@
 - [x] Fix CORS — Vite proxy `/whisper` → `localhost:8000`, no more cross-origin issues
 
 ### Playwright testing
-- [ ] Add Playwright as dev dependency
-- [ ] Use Playwright MCP to interactively debug PiP and audio issues
-- [ ] Write e2e test: open app → start session → verify transcript appears
-- [ ] Write e2e test: open PiP → verify overlay renders with status indicators
-- [ ] Write e2e test: settings persist across reload
-- [ ] Add `bun run test` script
+- [ ] E2e test: open app → start session → verify transcript appears
+- [ ] E2e test: open PiP → verify overlay renders with status indicators
+- [ ] E2e test: settings persist across reload
 
 ---
 
@@ -165,9 +162,9 @@
 ## Phase 6: Testing & CI
 
 - [x] Add GitHub Actions workflow for Biome check
-- [ ] Add integration test with mock audio stream
-- [ ] Add test for provider abstraction with mock API responses
-- [ ] Test web app in CI (playwright)
+- [x] Add integration tests with mock providers (Vitest + happy-dom)
+- [x] Test provider abstraction with mock API responses
+- [ ] E2E tests (Playwright)
 
 ---
 
@@ -181,14 +178,46 @@
 - [x] Package exports: `moanete/core`, `moanete/providers`, `moanete/mcp`, `moanete/ui`
 - [x] Hooks for hosted version: `beforeSessionStart`, `onSessionEnd`
 - [x] All config fields exposed in settings UI (audio, STT, LLM, analysis)
-- [ ] PiP refactor to reuse web components
+- [~] PiP kept as vanilla DOM — separate Document registry makes web components impractical, and the hosted version won't customize PiP
 
 ---
 
-## Phase 8: Hosted Version
+## Phase 8: Integration Tests
 
-- [ ] Backend proxy for Anthropic/OpenAI API calls (CORS)
-- [ ] Auth + user accounts
-- [ ] Billing / subscription management
-- [ ] Usage dashboard
-- [ ] Deploy hosted version
+Ensure the package exports are stable and consumable by the hosted version repo.
+
+### Package export tests
+- [x] Test `moanete/core` — import Session, Analyzer, Config, Storage, MCP bridge
+- [x] Test `moanete/providers` — import createLLM, createSTT, register custom providers
+- [x] Test `moanete/ui` — import and instantiate all custom elements (Vitest + happy-dom)
+- [x] Test `moanete/ui/base` — extend MoaneteElement, verify lifecycle hooks, emit(), $()
+
+### Provider contract tests
+- [x] Mock LLM provider — verify chat() interface, JSON mode, error handling
+- [x] Mock STT provider — verify start/stop/feedAudio/configure interface
+- [x] Test provider registry — register, create, override
+- [x] Built-in providers register correctly via barrel import
+
+### Analyzer tests
+- [x] Default and custom categories
+- [x] Single-agent mode — multi-key JSON parsing
+- [x] Multi-agent mode — parallel per-category calls
+- [x] Insight deduplication, seeding, coercion of object items
+- [x] Error handling — graceful failure with lastError
+- [x] onUpdate callback fires after analysis
+
+### Web component contract tests
+- [x] `<mn-settings>` — renders form, populates from config, emits `mn-settings-save`, preset buttons
+- [x] `<mn-history>` — renders dialog structure
+- [x] `<mn-chat>` — emits `mn-chat-send` with question, appendMessage
+- [x] `<mn-summary>` — emits `mn-summarize`, setSummary, setLoading
+- [x] `<mn-insights>` — accepts categories + insights, renders tabs
+- [x] `<mn-transcript>` — appendEntry, seedEntries, reset
+- [x] `<mn-status>` — setState updates dot and text
+- [x] `<mn-audio-level>` — setLevel updates animation
+
+### Utility tests
+- [x] escapeHtml, escapeAttr, formatDuration
+
+### CI
+- [x] Vitest + happy-dom in `just verify` and GitHub Actions (68 tests)
