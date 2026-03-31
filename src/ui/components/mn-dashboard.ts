@@ -181,7 +181,7 @@ export class MnDashboard extends MoaneteElement {
 
     this._session.onActivity = (source, level) => {
       const selector = source === "mic" ? ".mic-level" : ".tab-level";
-      this.$<MnAudioLevel>(selector).setLevel(level);
+      this.querySelector<MnAudioLevel>(selector)?.setLevel(level);
       pipUpdateActivity(source, level);
     };
 
@@ -195,7 +195,8 @@ export class MnDashboard extends MoaneteElement {
       this.$<HTMLDivElement>(".audio-indicators").hidden = false;
 
       const cfg = loadConfig();
-      this.$<MnAudioLevel>(".tab-level").parentElement!.hidden = !cfg.captureTab;
+      const tabLevel = this.querySelector<MnAudioLevel>(".tab-level");
+      if (tabLevel) tabLevel.hidden = !cfg.captureTab;
 
       if (!resumed) {
         this.$<MnTranscript>("mn-transcript").reset();

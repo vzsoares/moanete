@@ -143,6 +143,15 @@ export class Session {
     };
 
     // Init mic STT
+    // Firefox SpeechRecognition exists but often fails silently (service-not-allowed, network errors).
+    // Warn Firefox users to switch to Whisper for reliable STT.
+    const isFirefox = navigator.userAgent.includes("Firefox");
+    if (cfg.sttProvider === "browser" && isFirefox) {
+      this.onWarning?.(
+        "Firefox Browser STT may not work reliably — switch to Whisper (local) in Settings for better results",
+      );
+    }
+
     // When using Browser STT + tab capture, Browser STT picks up tab audio
     // from speakers and mislabels it as "You". Use feedAudio-based provider instead.
     if (cfg.captureMic) {
@@ -163,6 +172,11 @@ export class Session {
         this._transcriptLines.push({ source: "mic", text, timestamp: Date.now() });
         this.onTranscript?.({ source: "mic", text });
       });
+
+      // Check Whisper server reachability
+      if (micProvider === "whisper") {
+        this._checkWhisperServer(cfg.whisperHost);
+      }
     }
 
     // Init tab STT — Browser SpeechRecognition can't accept custom audio sources
@@ -212,6 +226,21 @@ export class Session {
     // Start analyzer loop
     this._analyzer.start();
     this._running = true;
+  }
+
+  /** Check if the Whisper server is reachable, warn if not. */
+  private async _checkWhisperServer(host: string): Promise<void> {
+    try {
+      const res = await fetch(`${host}/v1/audio/transcriptions`, { method: "OPTIONS" });
+      // Any response means the server is up (even 405 Method Not Allowed)
+      if (!res.ok && res.status !== 405) {
+        this.onWarning?.(
+          `Whisper server responded with ${res.status} — check if it's running (just whisper)`,
+        );
+      }
+    } catch {
+      this.onWarning?.("Whisper server not reachable — start it with: just whisper");
+    }
   }
 
   /** Pick the best STT provider for tab audio (needs feedAudio support) */

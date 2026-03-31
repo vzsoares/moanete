@@ -7,6 +7,22 @@ export interface AudioCaptureOptions {
   tab?: boolean;
 }
 
+/** Downsample from source rate to target rate using linear interpolation. */
+function downsample(input: Float32Array, srcRate: number, dstRate: number): Float32Array {
+  if (srcRate === dstRate) return new Float32Array(input);
+  const ratio = srcRate / dstRate;
+  const len = Math.floor(input.length / ratio);
+  const out = new Float32Array(len);
+  for (let i = 0; i < len; i++) {
+    const srcIdx = i * ratio;
+    const lo = Math.floor(srcIdx);
+    const hi = Math.min(lo + 1, input.length - 1);
+    const frac = srcIdx - lo;
+    out[i] = input[lo]! * (1 - frac) + input[hi]! * frac;
+  }
+  return out;
+}
+
 export class AudioCapture {
   private _ctx: AudioContext | null = null;
   private _micStream: MediaStream | null = null;
@@ -38,7 +54,12 @@ export class AudioCapture {
     const useMic = opts.mic !== false;
     const useTab = opts.tab === true;
 
-    this._ctx = new AudioContext({ sampleRate: TARGET_SAMPLE_RATE });
+    // Use default sample rate — Firefox rejects cross-rate AudioNode connections
+    this._ctx = new AudioContext();
+    // Ensure context is running (Firefox may start suspended)
+    if (this._ctx.state === "suspended") {
+      await this._ctx.resume();
+    }
 
     if (useMic) {
       this._micStream = await navigator.mediaDevices.getUserMedia({
@@ -80,6 +101,7 @@ export class AudioCapture {
 
   private _wireSource(stream: MediaStream, source: AudioSource): ScriptProcessorNode {
     const ctx = this._ctx!;
+    const nativeSampleRate = ctx.sampleRate;
     const mediaSource = ctx.createMediaStreamSource(stream);
     const gain = ctx.createGain();
     gain.gain.value = 1.0;
@@ -89,9 +111,12 @@ export class AudioCapture {
     const processor = ctx.createScriptProcessor(bufferSize, 1, 1);
     processor.onaudioprocess = (event: AudioProcessingEvent) => {
       const input = event.inputBuffer.getChannelData(0);
-      this._onAudio?.(source, new Float32Array(input));
 
-      // Compute RMS level for activity indicator
+      // Downsample to 16kHz for STT providers
+      const resampled = downsample(input, nativeSampleRate, TARGET_SAMPLE_RATE);
+      this._onAudio?.(source, resampled);
+
+      // Compute RMS level for activity indicator (use original for accuracy)
       if (this._onActivity) {
         let sum = 0;
         for (let i = 0; i < input.length; i++) {

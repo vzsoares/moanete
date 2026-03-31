@@ -458,7 +458,7 @@ function detectCompatHints(): void {
   }
 
   if (!(window.SpeechRecognition || window.webkitSpeechRecognition)) {
-    hints.push("Speech recognition not available — use Chrome/Edge, or enable flag in Firefox");
+    hints.push("Browser speech recognition not available — use Whisper (local) for STT instead");
   }
 
   if (isMac) {

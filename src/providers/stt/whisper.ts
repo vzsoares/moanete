@@ -48,6 +48,7 @@ function createWhisperSTT(): STTProvider {
   let language = "en";
   let onTranscript: ((text: string) => void) | null = null;
   let running = false;
+  let errorCount = 0;
   let audioBuffer: Float32Array[] = [];
   let bufferedSamples = 0;
   let processing = false;
@@ -101,7 +102,11 @@ function createWhisperSTT(): STTProvider {
         onTranscript(text);
       }
     } catch (e) {
-      console.warn("[whisper-stt] fetch error:", e);
+      errorCount++;
+      if (errorCount <= 3) {
+        console.error("[whisper-stt] fetch error:", e);
+        console.error("[whisper-stt] Is the Whisper server running? Start it with: just whisper");
+      }
     }
 
     processing = false;

@@ -59,7 +59,18 @@ function createBrowserSTT(): STTProvider {
 
       rec.onerror = (event) => {
         console.warn("[browser-stt] error:", event.error);
-        if (running && event.error !== "not-allowed") {
+        // "no-speech" is normal — just means silence, retry
+        // "aborted" happens on restart — retry
+        // "not-allowed" — user denied mic, don't retry
+        // "service-not-allowed" — Firefox: speech service unavailable
+        // "network" — Firefox: speech service unreachable
+        const fatal = ["not-allowed", "service-not-allowed"].includes(event.error);
+        if (fatal) {
+          console.error("[browser-stt] fatal:", event.error, "— switch to Whisper STT");
+          running = false;
+          return;
+        }
+        if (running) {
           setTimeout(() => {
             if (running) recognition?.start();
           }, 500);

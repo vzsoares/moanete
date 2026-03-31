@@ -30,7 +30,7 @@ function detectHints(): string[] {
     hints.push("PiP overlay not available in this browser (requires Chrome/Edge 116+)");
   }
   if (!(window.SpeechRecognition || window.webkitSpeechRecognition)) {
-    hints.push("Speech recognition not available — use Chrome/Edge, or enable flag in Firefox");
+    hints.push("Browser speech recognition not available — use Whisper (local) for STT instead");
   }
   if (isMac) {
     hints.push("System audio capture unavailable on macOS — tab audio only via Chrome");
