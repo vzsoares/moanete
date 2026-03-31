@@ -211,6 +211,16 @@ export class MnSettings extends MoaneteElement {
             </div>
           </section>
 
+          <section>
+            <h4 class="text-xs font-semibold text-primary uppercase tracking-wide mb-2">Chat</h4>
+            <div class="flex flex-col gap-2">
+              <label class="form-control w-full">
+                <div class="label"><span class="label-text text-xs">Custom Chat Preset Prompt</span></div>
+                <textarea data-key="customChatPrompt" class="textarea textarea-bordered textarea-sm w-full font-mono text-xs" rows="4" placeholder="Enter a custom system prompt for the Chat &quot;Custom&quot; preset..."></textarea>
+              </label>
+            </div>
+          </section>
+
         </div>
         <div class="modal-action">
           <button class="settings-save btn btn-primary btn-sm">Save</button>

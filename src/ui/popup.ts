@@ -398,6 +398,7 @@ async function openPiP(): Promise<void> {
 
   buildPipUI(pipWindow.document, "", {
     onChat: handlePipChat,
+    onChatGenerate: handlePipChatGenerate,
     onSummarize: handlePipSummarize,
     onToggleAutoCapture: handlePipToggleAutoCapture,
     onCaptureOnce: handlePipCaptureOnce,
@@ -426,7 +427,21 @@ async function handlePipChat(question: string, history: ChatMessage[]): Promise<
   try {
     const context = buildQAContext();
     const result = await answerQuestion(session.llm, question, context, history);
-    pipSetChatReply(result.answer, result.history);
+    pipSetChatReply(result.answer, result.history, result.suggestions);
+  } catch (e) {
+    pipSetChatReply(`Error: ${e instanceof Error ? e.message : String(e)}`, []);
+  }
+}
+
+async function handlePipChatGenerate(prompt: string): Promise<void> {
+  if (!session?.llm || !session.analyzer || !prompt) return;
+  try {
+    const context = buildQAContext();
+    const result = await session.llm.chat(
+      [{ role: "user", content: `${context}\n\nProduce the requested analysis.` }],
+      { system: prompt, maxTokens: 1500 },
+    );
+    pipSetChatReply(result, []);
   } catch (e) {
     pipSetChatReply(`Error: ${e instanceof Error ? e.message : String(e)}`, []);
   }

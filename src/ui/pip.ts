@@ -1,4 +1,5 @@
 import { toKey } from "../core/analyzer.ts";
+import { loadConfig } from "../core/config.ts";
 import type { TranscriptEntry } from "../core/session.ts";
 /**
  * PiP UI — minimal floating overlay.
@@ -7,6 +8,7 @@ import type { TranscriptEntry } from "../core/session.ts";
  * transcript, insights, or summary. No tabs, no chat, no complex layout.
  */
 import type { ChatMessage } from "../providers/llm/types.ts";
+import { CHAT_PRESETS } from "./components/mn-chat.ts";
 import PIP_CSS from "./global.css?inline";
 import { escapeHtml, renderMarkdown } from "./util.ts";
 
@@ -19,10 +21,12 @@ let onSummarize: (() => void) | null = null;
 let onToggleAutoCapture: (() => boolean) | null = null;
 let onCaptureOnce: (() => void) | null = null;
 let onChat: ((question: string, history: ChatMessage[]) => void) | null = null;
+let onChatGenerate: ((prompt: string) => void) | null = null;
 let chatHistory: ChatMessage[] = [];
 
 export interface PipCallbacks {
   onChat: (question: string, history: ChatMessage[]) => void;
+  onChatGenerate: (prompt: string) => void;
   onSummarize: () => void;
   onToggleAutoCapture: () => boolean;
   onCaptureOnce: () => void;
@@ -34,6 +38,7 @@ export function buildPipUI(pipDoc: Document, _cssUrl: string, callbacks: PipCall
   onToggleAutoCapture = callbacks.onToggleAutoCapture;
   onCaptureOnce = callbacks.onCaptureOnce;
   onChat = callbacks.onChat;
+  onChatGenerate = callbacks.onChatGenerate;
   chatHistory = [];
   transcriptBuffer.length = 0;
   currentInsights = {};
@@ -57,6 +62,12 @@ export function buildPipUI(pipDoc: Document, _cssUrl: string, callbacks: PipCall
       <span id="pip-tab-dot" class="w-2 h-2 rounded-full bg-base-content/20" title="Tab"></span>
       <button id="pip-btn-capture-once" class="btn btn-ghost btn-xs" hidden title="Capture screen once">📸</button>
       <button id="pip-btn-screen" class="btn btn-ghost btn-xs" hidden title="Auto-capture screen">🔄</button>
+      <div class="flex items-center gap-1" title="Context window usage">
+        <div class="w-10 h-1 bg-base-content/10 rounded-full overflow-hidden">
+          <div id="pip-ctx-bar" class="h-full bg-primary rounded-full transition-all" style="width: 0%"></div>
+        </div>
+        <span id="pip-ctx-label" class="text-[9px] text-base-content/40">0%</span>
+      </div>
     </header>
 
     <div class="flex gap-1 px-3 py-1 bg-base-300 border-b border-base-content/10 shrink-0">
@@ -75,9 +86,14 @@ export function buildPipUI(pipDoc: Document, _cssUrl: string, callbacks: PipCall
       </div>
       <div id="pip-chat" class="hidden flex flex-col h-full">
         <div id="pip-chat-messages" class="flex-1 overflow-y-auto flex flex-col gap-1.5 mb-2"></div>
-        <div class="flex gap-1 shrink-0">
-          <input type="text" id="pip-chat-input" class="input input-bordered input-xs flex-1" placeholder="Ask..." />
-          <button id="pip-chat-send" class="btn btn-primary btn-xs">Send</button>
+        <div class="flex flex-col gap-1 shrink-0">
+          <select id="pip-chat-preset" class="select select-bordered select-xs w-full">
+            <option value="">Q&A</option>
+          </select>
+          <div class="flex gap-1">
+            <input type="text" id="pip-chat-input" class="input input-bordered input-xs flex-1 min-w-0" placeholder="Ask..." />
+            <button id="pip-chat-send" class="btn btn-primary btn-xs shrink-0">Send</button>
+          </div>
         </div>
       </div>
     </div>
@@ -95,6 +111,7 @@ export function destroyPipUI(): void {
   onToggleAutoCapture = null;
   onCaptureOnce = null;
   onChat = null;
+  onChatGenerate = null;
   chatHistory = [];
 }
 
@@ -174,29 +191,68 @@ function setupScreenCapture(): void {
   });
 }
 
+function getPipPresetPrompt(select: HTMLSelectElement): string {
+  if (!select.value) return "";
+  if (select.value === "custom") return loadConfig().customChatPrompt;
+  const p = CHAT_PRESETS.find((p) => p.name === select.value);
+  return p?.prompt ?? "";
+}
+
 function setupPipChat(): void {
   if (!doc) return;
   const input = doc.getElementById("pip-chat-input") as HTMLInputElement;
   const btn = doc.getElementById("pip-chat-send") as HTMLButtonElement;
+  const preset = doc.getElementById("pip-chat-preset") as HTMLSelectElement;
+
+  // Populate preset options
+  for (const p of CHAT_PRESETS) {
+    const opt = doc.createElement("option");
+    opt.value = p.name;
+    opt.textContent = p.name;
+    preset.appendChild(opt);
+  }
+  const customOpt = doc.createElement("option");
+  customOpt.value = "custom";
+  customOpt.textContent = "Custom";
+  preset.appendChild(customOpt);
 
   const send = () => {
+    const presetPrompt = getPipPresetPrompt(preset);
     const q = input.value.trim();
-    if (!q || !onChat) return;
-    input.value = "";
-    appendPipChatMessage("user", q);
-    onChat(q, chatHistory);
+
+    if (presetPrompt) {
+      input.value = "";
+      const label = preset.value === "custom" ? "Custom" : preset.value;
+      appendPipChatMessage("user", q ? `[${label}] ${q}` : `[${label}]`);
+      onChatGenerate?.(q ? `${presetPrompt}\n\nAdditional instruction: ${q}` : presetPrompt);
+    } else {
+      if (!q || !onChat) return;
+      input.value = "";
+      appendPipChatMessage("user", q);
+      onChat(q, chatHistory);
+    }
   };
 
   btn.addEventListener("click", send);
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") send();
   });
+
+  preset.addEventListener("change", () => {
+    input.placeholder = preset.value ? "Extra instructions (optional)..." : "Ask...";
+  });
 }
 
-function appendPipChatMessage(role: string, text: string): void {
+function appendPipChatMessage(role: string, text: string, suggestions: string[] = []): void {
   if (!doc) return;
   const container = doc.getElementById("pip-chat-messages");
   if (!container) return;
+
+  // Remove previous suggestion chips
+  for (const old of container.querySelectorAll<HTMLDivElement>(".pip-chat-suggestions")) {
+    old.remove();
+  }
+
   const el = doc.createElement("div");
   const isUser = role === "user";
   el.className = `text-xs leading-snug ${isUser ? "text-info" : ""}`;
@@ -206,6 +262,25 @@ function appendPipChatMessage(role: string, text: string): void {
     el.innerHTML = `<span class="font-semibold text-success">moanete:</span><div class="mt-1">${renderMarkdown(text)}</div>`;
   }
   container.appendChild(el);
+
+  if (suggestions.length > 0) {
+    const chips = doc.createElement("div");
+    chips.className = "pip-chat-suggestions flex flex-wrap gap-1 mt-1";
+    for (const s of suggestions) {
+      const chip = doc.createElement("button");
+      chip.className =
+        "btn btn-ghost btn-xs text-[10px] border border-base-content/20 rounded-full";
+      chip.textContent = s;
+      chip.addEventListener("click", () => {
+        chips.remove();
+        appendPipChatMessage("user", s);
+        onChat?.(s, chatHistory);
+      });
+      chips.appendChild(chip);
+    }
+    container.appendChild(chips);
+  }
+
   container.scrollTop = container.scrollHeight;
 }
 
@@ -263,6 +338,27 @@ export function updateInsights(insights: Record<string, string[]>): void {
   if (currentView === "insights") renderInsightsView();
 }
 
+let lastPipCtxPct = -1;
+
+export function pipUpdateContext(pct: number): void {
+  if (!doc || pct === lastPipCtxPct) return;
+  lastPipCtxPct = pct;
+  const bar = doc.getElementById("pip-ctx-bar");
+  const label = doc.getElementById("pip-ctx-label");
+  if (bar) {
+    bar.style.width = `${pct}%`;
+    bar.classList.remove("bg-primary", "bg-warning", "bg-error");
+    bar.classList.add(pct >= 85 ? "bg-error" : pct >= 60 ? "bg-warning" : "bg-primary");
+  }
+  if (label) {
+    label.textContent = `${pct}%`;
+    label.classList.remove("animate-pulse");
+    void label.offsetWidth;
+    label.classList.add("animate-pulse");
+    setTimeout(() => label.classList.remove("animate-pulse"), 1500);
+  }
+}
+
 export function pipUpdateActivity(source: "mic" | "tab", level: number): void {
   if (!doc) return;
   const dot = doc.getElementById(source === "mic" ? "pip-mic-dot" : "pip-tab-dot");
@@ -274,9 +370,13 @@ export function pipUpdateActivity(source: "mic" | "tab", level: number): void {
   }
 }
 
-export function setChatReply(answer: string, history: ChatMessage[]): void {
+export function setChatReply(
+  answer: string,
+  history: ChatMessage[],
+  suggestions: string[] = [],
+): void {
   chatHistory = history;
-  appendPipChatMessage("assistant", answer);
+  appendPipChatMessage("assistant", answer, suggestions);
 }
 
 export function setSummary(text: string): void {

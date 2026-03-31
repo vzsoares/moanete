@@ -186,6 +186,15 @@ export class Analyzer {
     return [...this._screenDescriptions];
   }
 
+  /** Current context size in characters and ratio to the window limit. */
+  get contextSize(): { chars: number; maxChars: number; ratio: number } {
+    let chars = 0;
+    for (const c of this._chunks) chars += c.text.length + 1;
+    for (const d of this._screenDescriptions) chars += d.length + 1;
+    if (this._contextSummary) chars += this._contextSummary.length;
+    return { chars, maxChars: TRANSCRIPT_WINDOW, ratio: Math.min(chars / TRANSCRIPT_WINDOW, 1) };
+  }
+
   set onUpdate(callback: (insights: Record<string, string[]>) => void) {
     this._onUpdate = callback;
   }

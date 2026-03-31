@@ -34,7 +34,12 @@ CRITICAL RULES:
 
 Use the provided context (transcript and extracted insights) to answer.
 If you don't have enough information, say so honestly.
-Be concise.`;
+Be concise.
+
+After your answer, add exactly this section on a new line:
+FOLLOW_UP: suggestion 1 | suggestion 2 | suggestion 3
+These should be short (under 10 words each) natural follow-up questions the user might ask next. \
+Always include exactly 3 suggestions separated by " | ".`;
 
 export async function summarizeTranscript(
   llm: LLMProvider,
@@ -62,7 +67,21 @@ export async function summarizeTranscript(
 
 export interface QAResult {
   answer: string;
+  suggestions: string[];
   history: ChatMessage[];
+}
+
+/** Parse FOLLOW_UP line from response, return clean answer + suggestions. */
+function parseFollowUps(raw: string): { answer: string; suggestions: string[] } {
+  const match = raw.match(/\nFOLLOW_UP:\s*(.+)$/m);
+  if (!match) return { answer: raw, suggestions: [] };
+  const answer = raw.slice(0, match.index).trimEnd();
+  const suggestions = match[1]!
+    .split("|")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+  return { answer, suggestions };
 }
 
 const SCREEN_ANALYSIS_SYSTEM = `\
@@ -110,9 +129,11 @@ export async function answerQuestion(
   const content = `Context:\n${context}\n\nQuestion: ${question}`;
   const messages: ChatMessage[] = [...history, { role: "user", content }];
 
-  const answer = await llm.chat(messages, { system: QA_SYSTEM, maxTokens: 512 });
+  const raw = await llm.chat(messages, { system: QA_SYSTEM, maxTokens: 512 });
+  const { answer, suggestions } = parseFollowUps(raw);
   return {
     answer,
-    history: [...messages, { role: "assistant", content: answer }],
+    suggestions,
+    history: [...messages, { role: "assistant", content: raw }],
   };
 }

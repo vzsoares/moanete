@@ -20,6 +20,7 @@ export interface Config {
   captureMic: boolean;
   captureTab: boolean;
   autoPip: boolean;
+  customChatPrompt: string;
   theme: string;
 }
 
@@ -45,6 +46,7 @@ export const DEFAULTS: Config = {
   captureMic: true,
   captureTab: false,
   autoPip: true,
+  customChatPrompt: "",
   theme: "dark",
 };
 

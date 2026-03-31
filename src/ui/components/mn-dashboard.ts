@@ -19,6 +19,7 @@ import {
   pipSetScreenAvailable,
   setSummary as pipSetSummary,
   pipUpdateActivity,
+  pipUpdateContext,
   updateInsights as pipUpdateInsights,
   seedPipState,
 } from "../pip.ts";
@@ -54,6 +55,13 @@ export class MnDashboard extends MoaneteElement {
         <div class="audio-indicators flex items-center gap-3 ml-2" hidden>
           <mn-audio-level class="mic-level" label="Mic"></mn-audio-level>
           <mn-audio-level class="tab-level" label="Tab"></mn-audio-level>
+        </div>
+        <div class="context-indicator flex items-center gap-1 ml-2" hidden title="Context window usage">
+          <span class="text-[10px] text-base-content/40">ctx</span>
+          <div class="w-16 h-1.5 bg-base-content/10 rounded-full overflow-hidden">
+            <div class="context-bar h-full bg-primary rounded-full transition-all" style="width: 0%"></div>
+          </div>
+          <span class="context-label text-[10px] text-base-content/40 transition-colors">0%</span>
         </div>
         <div class="flex-1"></div>
         <div class="flex items-center gap-2">
@@ -156,6 +164,11 @@ export class MnDashboard extends MoaneteElement {
       this._handleChat(e.detail.question);
     }) as EventListener);
 
+    // Chat preset generate
+    this.addEventListener("mn-chat-generate", ((e: CustomEvent<{ prompt: string }>) => {
+      this._handleChatGenerate(e.detail.prompt);
+    }) as EventListener);
+
     // Summary
     this.addEventListener("mn-summarize", () => this._handleSummarize());
 
@@ -177,12 +190,14 @@ export class MnDashboard extends MoaneteElement {
       this.$<MnTranscript>("mn-transcript").appendEntry(entry);
       pipAppendTranscript(entry);
       pushTranscript(entry.source, entry.text);
+      this._updateContextIndicator();
     };
 
     this._session.onInsights = (insights) => {
       this.$<MnInsights>("mn-insights").updateInsights(insights);
       pipUpdateInsights(insights);
       pushInsights(insights);
+      this._updateContextIndicator();
     };
 
     this._session.onError = (msg) => {
@@ -207,6 +222,7 @@ export class MnDashboard extends MoaneteElement {
       this.$<HTMLButtonElement>(".btn-stop").hidden = false;
       this.$<HTMLButtonElement>(".btn-pip").hidden = false;
       this.$<HTMLDivElement>(".audio-indicators").hidden = false;
+      this.$<HTMLDivElement>(".context-indicator").hidden = false;
 
       const cfg = loadConfig();
       const tabLevel = this.querySelector<HTMLElement>(".tab-level");
@@ -240,6 +256,7 @@ export class MnDashboard extends MoaneteElement {
     this.$<HTMLButtonElement>(".btn-screen").hidden = true;
     this.$<HTMLButtonElement>(".btn-auto-screen").hidden = true;
     this.$<HTMLDivElement>(".audio-indicators").hidden = true;
+    this.$<HTMLDivElement>(".context-indicator").hidden = true;
     this.$<MnScreenCaptures>("mn-screen-captures").clear();
     this._pipWindow?.close();
   }
@@ -257,13 +274,31 @@ export class MnDashboard extends MoaneteElement {
     await this._startSession(true);
   }
 
+  private async _handleChatGenerate(prompt: string): Promise<void> {
+    if (!this._session?.llm || !this._session.analyzer || !prompt) return;
+    const chat = this.$<MnChat>("mn-chat");
+    chat.appendMessage("user", "[Generate from preset]");
+
+    try {
+      const context = this._buildQAContext();
+      const result = await this._session.llm.chat(
+        [{ role: "user", content: `${context}\n\nProduce the requested analysis.` }],
+        { system: prompt, maxTokens: 1500 },
+      );
+      chat.appendMessage("assistant", result);
+      pipSetChatReply(result, []);
+    } catch (e) {
+      chat.appendMessage("assistant", `Error: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
   private async _handleChat(question: string): Promise<void> {
     if (!this._session?.llm || !this._session.analyzer) return;
     try {
       const context = this._buildQAContext();
       const result = await answerQuestion(this._session.llm, question, context, this._chatHistory);
       this._chatHistory = result.history;
-      this.$<MnChat>("mn-chat").appendMessage("assistant", result.answer);
+      this.$<MnChat>("mn-chat").appendMessage("assistant", result.answer, result.suggestions);
     } catch (e) {
       this.$<MnChat>("mn-chat").appendMessage(
         "assistant",
@@ -363,6 +398,7 @@ export class MnDashboard extends MoaneteElement {
 
     buildPipUI(this._pipWindow.document, "", {
       onChat: (question, history) => this._handlePipChat(question, history),
+      onChatGenerate: (prompt) => this._handleChatGenerate(prompt),
       onSummarize: () => this._handlePipSummarize(),
       onToggleAutoCapture: () => this._handlePipToggleAutoCapture(),
       onCaptureOnce: () => this._handlePipCaptureOnce(),
@@ -392,7 +428,7 @@ export class MnDashboard extends MoaneteElement {
     try {
       const context = this._buildQAContext();
       const result = await answerQuestion(this._session.llm, question, context, history);
-      pipSetChatReply(result.answer, result.history);
+      pipSetChatReply(result.answer, result.history, result.suggestions);
     } catch (e) {
       pipSetChatReply(`Error: ${e instanceof Error ? e.message : String(e)}`, []);
     }
@@ -447,6 +483,33 @@ export class MnDashboard extends MoaneteElement {
       parts.push(`## Extracted insights\n${insightLines.join("\n")}`);
     }
     return parts.join("\n\n");
+  }
+
+  private _lastCtxPct = -1;
+
+  private _updateContextIndicator(): void {
+    const ctx = this._session?.analyzer?.contextSize;
+    if (!ctx) return;
+    const pct = Math.round(ctx.ratio * 100);
+    if (pct === this._lastCtxPct) return;
+    this._lastCtxPct = pct;
+
+    const bar = this.querySelector<HTMLDivElement>(".context-bar");
+    const label = this.querySelector<HTMLSpanElement>(".context-label");
+    if (bar) bar.style.width = `${pct}%`;
+    if (label) {
+      label.textContent = `${pct}%`;
+      label.classList.remove("animate-pulse");
+      // Force reflow to restart animation
+      void label.offsetWidth;
+      label.classList.add("animate-pulse");
+      setTimeout(() => label.classList.remove("animate-pulse"), 1500);
+    }
+    if (bar) {
+      bar.classList.remove("bg-primary", "bg-warning", "bg-error");
+      bar.classList.add(pct >= 85 ? "bg-error" : pct >= 60 ? "bg-warning" : "bg-primary");
+    }
+    pipUpdateContext(pct);
   }
 }
 
