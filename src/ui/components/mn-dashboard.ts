@@ -157,6 +157,19 @@ export class MnDashboard extends MoaneteElement {
         .map((s) => s.trim())
         .filter(Boolean);
       this.$<MnInsights>("mn-insights").categories = categories;
+
+      // Update running analyzer with new categories
+      if (this._session?.analyzer) {
+        let agentPrompts: Record<string, string> | undefined;
+        if (cfg.agentPrompts) {
+          try {
+            agentPrompts = JSON.parse(cfg.agentPrompts) as Record<string, string>;
+          } catch {
+            // ignore invalid JSON
+          }
+        }
+        this._session.analyzer.updateCategories(categories, agentPrompts);
+      }
     }) as EventListener);
 
     // Chat send

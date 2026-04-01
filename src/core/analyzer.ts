@@ -245,11 +245,15 @@ export class Analyzer {
   }
 
   updateCategories(categories: string[], agentPrompts?: AgentPrompts): void {
+    const oldInsights = this._insights;
     this._categories = categories;
     this._keys = categories.map(toKey);
     this._singlePrompt = buildSystemPrompt(categories, this._language);
     this._rebuildAgentPrompts(agentPrompts);
-    this._insights = Object.fromEntries(this._keys.map((k) => [k, []]));
+    this._insights = Object.fromEntries(
+      this._keys.map((k) => [k, oldInsights[k] ?? []]),
+    );
+    this._dirty = true;
   }
 
   private _rebuildAgentPrompts(custom?: AgentPrompts): void {
