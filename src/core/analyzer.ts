@@ -250,9 +250,7 @@ export class Analyzer {
     this._keys = categories.map(toKey);
     this._singlePrompt = buildSystemPrompt(categories, this._language);
     this._rebuildAgentPrompts(agentPrompts);
-    this._insights = Object.fromEntries(
-      this._keys.map((k) => [k, oldInsights[k] ?? []]),
-    );
+    this._insights = Object.fromEntries(this._keys.map((k) => [k, oldInsights[k] ?? []]));
     this._dirty = true;
   }
 
