@@ -80,7 +80,7 @@ describe("<mn-transcript>", () => {
   test("appendEntry adds transcript line", () => {
     const el = mount<MnTranscript>("mn-transcript");
     el.appendEntry({ source: "mic", text: "hello" });
-    expect(el.textContent).toContain("You:");
+    expect(el.textContent).toContain("You");
     expect(el.textContent).toContain("hello");
     cleanup();
   });
@@ -89,7 +89,7 @@ describe("<mn-transcript>", () => {
     const el = mount<MnTranscript>("mn-transcript");
     el.appendEntry({ source: "tab", text: "world" });
     expect(el.textContent).not.toContain("Start a session");
-    expect(el.textContent).toContain("Them:");
+    expect(el.textContent).toContain("Them");
     cleanup();
   });
 

@@ -30,7 +30,7 @@ export class MnStatus extends MoaneteElement {
 
   render(): void {
     this.className = "flex items-center gap-2";
-    this.innerHTML = `<span class="dot ${this._state}"></span><span class="text-xs text-base-content/60"></span>`;
+    this.innerHTML = `<span class="dot ${this._state}"></span><span class="text-[12px] text-base-content/40 tabular-nums"></span>`;
     this._update();
   }
 

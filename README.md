@@ -1,12 +1,13 @@
-# moanete
+# moañete
 
-**Your AI meeting copilot** — get real-time transcription, smart insights, and a Q&A chat during any meeting, all from your browser.
+**Real-time AI assistant for anything you can hear or see** — transcription, insights, and Q&A, all from your browser.
 
 > **Moañete** — from the Guarani language: *confirmar / fazer ser verdade*. Used when persuasion is based on proving that something is real or correct.
 
 ## Table of Contents
 
 - [What does it do?](#what-does-it-do)
+- [Use cases](#use-cases)
 - [Quick Start (Docker)](#quick-start-docker)
 - [Quick Start (manual)](#quick-start-manual)
 - [Provider options](#provider-options)
@@ -18,32 +19,52 @@
 
 ## What does it do?
 
-moanete listens to your meeting (mic and/or system audio), transcribes it in real time, and uses an AI to extract useful insights while the meeting is happening. It runs entirely in your browser — no account required.
+moañete listens to your mic, your browser tab audio, or both, transcribes everything in real time, and uses AI to extract insights while it happens. It can also see your screen. It runs entirely in your browser — no account required.
 
 **Key features:**
-- Live transcript (who said what)
-- AI-generated insights every ~15 seconds (key points, action items, suggestions, questions)
+- Live transcript with speaker labels (You / Them)
+- AI-generated insights every ~15 seconds (fully customizable categories)
 - Chat with presets — Q&A, Meeting briefing, Code Interview coach, LeetCode coach/solver, Lecture notes, or custom prompts
-- Auto-assist mode — AI monitors the session and speaks up only when it has something relevant
-- On-demand summary (transcript + screen content)
-- Screen capture analysis — analyze what's on screen (code, slides, whiteboard) with auto-capture mode that feeds context into insights
-- Floating Picture-in-Picture overlay with full chat, presets, screen capture, and context indicator
-- Session history — review, export, or resume past meetings
-- Fully local & free with Ollama + Whisper, or bring your own API keys
+- Auto-assist mode — AI monitors the session and speaks up only when relevant
+- Screen capture + analysis — captures what's on screen (code, slides, exams, whiteboard) and feeds it into the AI context
+- Floating Picture-in-Picture overlay so you can keep working while the AI watches
+- Session history — review, export, or resume past sessions
+- Fully local and free with Ollama + Whisper, or bring your own API keys (OpenAI, Anthropic, Deepgram)
 
-**How to use it:**
-1. Open the app in Chrome
-2. Click **Start Session** — allow mic access when prompted
-3. PiP overlay opens automatically (or click **PiP** in the navbar)
-4. Talk! The transcript and insights update automatically
-5. Pick a **chat preset** (Meeting, Code Interview, LeetCode, Lecture) and hit **Send** — or just ask questions in Q&A mode
-6. Toggle **Auto** for hands-free AI commentary
+## Use cases
+
+moañete is not just a meeting tool. It listens to any audio your browser can capture and sees your screen.
+
+| Use case | What to do | Recommended preset |
+|----------|-----------|-------------------|
+| **Meetings** | Capture mic + tab audio, get action items and key points | Meeting |
+| **Online lectures** | Capture tab audio, get study notes and key concepts | Lecture |
+| **Coding interviews** | Capture mic + tab, get real-time coaching on your interview process | Code Interview |
+| **LeetCode / competitive programming** | Share your screen, get algorithm hints or full solutions | LeetCode Coach / Solve |
+| **Exams / online assessments** | Share your screen, ask questions about what's displayed | Q&A + screen capture |
+| **Pair programming** | Capture mic, get bugs, design decisions, and TODOs | Pair Programming |
+| **YouTube / podcasts / audiobooks** | Capture tab audio, get transcripts and summaries | Q&A |
+| **Anything with audio or screen** | Capture tab, mic, or both + screen share | Custom prompt |
+
+### Video guide
+
+<!-- TODO: replace with actual video embed once recorded -->
+> Video coming soon — a 60-second walkthrough showing moañete in action across different use cases.
+
+### Step by step
+
+1. Open moañete in Chrome
+2. Click **Start Session** — allow mic and/or share a tab/screen
+3. The PiP overlay opens so you can keep working in another window
+4. Transcript and insights update automatically
+5. Pick a **chat preset** or ask questions in Q&A mode
+6. Enable screen capture to give the AI visual context (code on screen, slides, exam questions)
 
 ## Quick Start (Docker)
 
 > **You need:** [Docker](https://docs.docker.com/get-docker/) installed and running. That's it.
 
-One command gets everything running — the web app, a local speech-to-text engine, and a local AI model:
+One command gets everything running — the web app, a local speech-to-text engine, and a local AI:
 
 ```sh
 git clone https://github.com/vzsoares/moanete.git
@@ -76,7 +97,7 @@ Requires [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-nat
 | Web app | http://localhost:5173 | The moanete interface |
 | Whisper | http://localhost:8000 | Converts speech to text (locally) |
 | Ollama | http://localhost:11434 | AI model for insights and chat (locally) |
-| MCP bridge | ws://localhost:3001 | Optional — lets AI coding assistants read your meeting |
+| MCP bridge | ws://localhost:3001 | Optional — lets AI coding assistants read your session |
 
 </details>
 
@@ -203,7 +224,7 @@ bun run fix           # biome auto-fix
 
 ### MCP Server
 
-moanete exposes a Model Context Protocol (MCP) server so AI assistants like Claude Code can query the live meeting:
+moañete exposes a Model Context Protocol (MCP) server so AI assistants like Claude Code can query the live session:
 
 ```sh
 just mcp   # start MCP server (stdio + ws://localhost:3001)
@@ -227,7 +248,7 @@ Add to your Claude Code config (`.claude/settings.json`):
 
 ### MCP Client — External Servers
 
-moanete can also connect to external MCP servers (like Notion) for extended context during meetings.
+moañete can also connect to external MCP servers (like Notion) for extended context during sessions.
 
 Configure external servers in `mcp-servers.json`:
 ```json

@@ -88,27 +88,27 @@ Capture technical details accurately. Use the same language as the lecture.`,
 
 export class MnChat extends MoaneteElement {
   render(): void {
-    this.className = "flex-1 flex flex-col bg-base-300 rounded-lg overflow-hidden";
+    this.className = "flex-1 flex flex-col overflow-hidden border-t border-base-content/[0.06]";
 
     const presetOptions = CHAT_PRESETS.map(
       (p) => `<option value="${p.name}">${p.name}</option>`,
     ).join("");
 
     this.innerHTML = `
-      <div class="px-4 py-2 border-b border-base-content/10 shrink-0 flex items-center gap-2">
-        <h2 class="text-sm font-semibold shrink-0">Chat</h2>
+      <div class="px-4 py-2 shrink-0 flex items-center gap-2">
+        <h2 class="mn-panel-header shrink-0">Chat</h2>
         <div class="flex-1"></div>
-        <select class="chat-preset select select-bordered select-xs">
+        <select class="chat-preset select select-xs bg-base-content/[0.04] border-base-content/[0.08] text-xs">
           <option value="">Q&A</option>
           ${presetOptions}
           <option value="custom">Custom</option>
         </select>
-        <button class="chat-auto btn btn-ghost btn-xs" title="Auto-assist: monitor session and speak when relevant">Auto</button>
+        <button class="chat-auto btn btn-ghost btn-xs text-base-content/40" title="Auto-assist: monitor session and speak when relevant">Auto</button>
       </div>
-      <div class="chat-messages flex-1 overflow-y-auto p-3 flex flex-col gap-1.5"></div>
-      <div class="flex gap-2 p-3 border-t border-base-content/10 shrink-0">
-        <input type="text" class="chat-input input input-bordered input-sm flex-1" placeholder="Ask about the session..." />
-        <button class="chat-send btn btn-primary btn-sm">Send</button>
+      <div class="chat-messages flex-1 overflow-y-auto px-4 pb-2 flex flex-col gap-2"></div>
+      <div class="flex gap-2 px-4 py-3 shrink-0">
+        <input type="text" class="chat-input flex-1 bg-base-content/[0.04] border border-base-content/[0.08] rounded-lg px-3.5 py-2 text-[13px] text-base-content outline-none transition-colors focus:border-primary/40 placeholder:text-base-content/30" placeholder="Ask about the session..." />
+        <button class="chat-send btn btn-primary btn-sm rounded-lg">Send</button>
       </div>
     `;
 
@@ -198,12 +198,12 @@ export class MnChat extends MoaneteElement {
 
     const el = document.createElement("div");
     const isUser = role === "user";
-    el.className = `text-sm leading-snug ${isUser ? "text-info" : ""}`;
+    el.className = "text-[13px] leading-snug";
 
     if (isUser) {
-      el.innerHTML = `<span class="font-semibold">You:</span> ${escapeHtml(text)}`;
+      el.innerHTML = `<span class="font-semibold mn-speaker-you">You:</span> <span class="text-base-content/60">${escapeHtml(text)}</span>`;
     } else {
-      el.innerHTML = `<span class="font-semibold text-success">moanete:</span><div class="mt-1">${renderMarkdown(text)}</div>`;
+      el.innerHTML = `<span class="font-semibold mn-speaker-them">moañete:</span><div class="mt-1 text-base-content/70">${renderMarkdown(text)}</div>`;
     }
 
     const container = this.$<HTMLDivElement>(".chat-messages");
@@ -214,7 +214,8 @@ export class MnChat extends MoaneteElement {
       chips.className = "chat-suggestions flex flex-wrap gap-1 mt-1";
       for (const s of suggestions) {
         const chip = document.createElement("button");
-        chip.className = "btn btn-ghost btn-xs text-xs border border-base-content/20 rounded-full";
+        chip.className =
+          "px-2.5 py-1 text-[11px] rounded-full border border-base-content/[0.08] text-base-content/40 hover:text-base-content/60 hover:bg-base-content/[0.04] cursor-pointer transition-colors";
         chip.textContent = s;
         chip.addEventListener("click", () => {
           this.$<HTMLInputElement>(".chat-input").value = s;

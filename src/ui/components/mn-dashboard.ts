@@ -48,44 +48,38 @@ export class MnDashboard extends MoaneteElement {
   onSessionEnd: ((session: StoredSession) => void) | null = null;
 
   render(): void {
-    this.className = "h-screen flex flex-col bg-base-200 overflow-hidden";
+    this.className = "h-screen flex flex-col bg-base-100 overflow-hidden";
     this.innerHTML = `
       <!-- Navbar -->
-      <nav class="navbar bg-base-300 border-b border-base-content/10 px-4 gap-2 shrink-0">
-        <div class="flex-none"><h1 class="text-lg font-bold text-primary">moanete</h1></div>
-        <mn-status></mn-status>
-        <div class="audio-indicators flex items-center gap-3 ml-2" hidden>
-          <mn-audio-level class="mic-level" label="Mic"></mn-audio-level>
-          <mn-audio-level class="tab-level" label="Tab"></mn-audio-level>
-        </div>
-        <div class="context-indicator flex items-center gap-1 ml-2" hidden title="Context window usage">
-          <span class="text-[10px] text-base-content/40">ctx</span>
-          <div class="w-16 h-1.5 bg-base-content/10 rounded-full overflow-hidden">
-            <div class="context-bar h-full bg-primary rounded-full transition-all" style="width: 0%"></div>
+      <nav class="flex items-center justify-between px-5 py-3 border-b border-base-content/[0.06] bg-base-100/95 backdrop-blur-sm shrink-0">
+        <div class="flex items-center gap-4">
+          <span class="text-[15px] font-semibold tracking-tight text-base-content">moañete</span>
+          <mn-status></mn-status>
+          <div class="audio-indicators flex items-center gap-3" hidden>
+            <mn-audio-level class="mic-level" label="Mic"></mn-audio-level>
+            <mn-audio-level class="tab-level" label="Tab"></mn-audio-level>
           </div>
-          <span class="context-label text-[10px] text-base-content/40 transition-colors">0%</span>
+          <div class="context-indicator flex items-center gap-2" hidden title="Context window usage">
+            <div class="w-20 h-[3px] bg-base-content/[0.06] rounded-full overflow-hidden">
+              <div class="context-bar h-full bg-primary rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <span class="context-label text-[10px] text-base-content/30 tabular-nums transition-colors">0%</span>
+          </div>
         </div>
-        <div class="flex-1"></div>
         <div class="flex items-center gap-2">
           <button class="btn-start btn btn-primary btn-sm">Start Session</button>
-          <button class="btn-stop btn btn-error btn-sm" hidden>Stop</button>
+          <button class="btn-stop btn btn-sm bg-error/10 border-error/20 text-error hover:bg-error/20" hidden>Stop</button>
           <button class="btn-pip btn btn-ghost btn-sm" hidden>PiP</button>
-          <button class="btn-screen btn btn-ghost btn-sm gap-1" hidden title="Analyze screen once">
+          <button class="btn-screen btn btn-ghost btn-sm" hidden title="Analyze screen once">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
           </button>
           <button class="btn-auto-screen btn btn-ghost btn-sm gap-1" hidden title="Auto-capture screen every 5s">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
             Auto
           </button>
-          <button class="btn-mcp btn btn-ghost btn-sm gap-1">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-            MCP
-          </button>
-          <button class="btn-history btn btn-ghost btn-sm gap-1">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            History
-          </button>
-          <button class="btn-settings btn btn-ghost btn-sm btn-circle" aria-label="Settings">
+          <button class="btn-mcp btn btn-ghost btn-sm text-base-content/50 hover:text-base-content/80">MCP</button>
+          <button class="btn-history btn btn-ghost btn-sm text-base-content/50 hover:text-base-content/80">History</button>
+          <button class="btn-settings btn btn-ghost btn-sm btn-circle text-base-content/50 hover:text-base-content/80" aria-label="Settings">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
           </button>
         </div>
@@ -93,10 +87,10 @@ export class MnDashboard extends MoaneteElement {
 
       <mn-compat-hints></mn-compat-hints>
 
-      <!-- Main dashboard -->
-      <main class="flex-1 flex overflow-hidden p-4 gap-4">
+      <!-- Main dashboard — two-panel layout -->
+      <main class="flex-1 flex overflow-hidden">
         <mn-transcript></mn-transcript>
-        <aside class="w-96 flex flex-col gap-4 shrink-0">
+        <aside class="w-[420px] flex flex-col shrink-0 bg-base-200/60">
           <mn-insights></mn-insights>
           <mn-screen-captures></mn-screen-captures>
           <mn-chat></mn-chat>

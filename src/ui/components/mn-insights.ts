@@ -14,9 +14,9 @@ export class MnInsights extends MoaneteElement {
   }
 
   render(): void {
-    this.className = "flex-1 flex flex-col bg-base-300 rounded-lg overflow-hidden";
+    this.className = "flex-1 flex flex-col overflow-hidden";
     this.innerHTML = `
-      <div class="insight-tabs tabs tabs-bordered bg-base-300 shrink-0"></div>
+      <div class="insight-tabs flex gap-0.5 px-4 pt-3 shrink-0"></div>
       <div class="insight-panels flex-1 relative overflow-hidden"></div>
     `;
     this._rebuildTabs();
@@ -43,8 +43,7 @@ export class MnInsights extends MoaneteElement {
       const existing = container.childElementCount;
       for (const item of items.slice(existing)) {
         const card = document.createElement("div");
-        card.className =
-          "bg-base-200 rounded-lg px-3 py-2 text-xs leading-relaxed border-l-2 border-primary animate-fade-in";
+        card.className = "mn-insight-card animate-fade-in";
         card.textContent = item;
         container.appendChild(card);
       }
@@ -62,15 +61,15 @@ export class MnInsights extends MoaneteElement {
     this._categories.forEach((name, i) => {
       const key = toKey(name);
       const btn = document.createElement("button");
-      btn.className = `tab text-xs${i === 0 ? " tab-active" : ""}`;
+      btn.className = `px-3 py-1.5 text-xs rounded-md transition-colors cursor-pointer ${i === 0 ? "text-base-content bg-base-content/[0.04]" : "text-base-content/40 hover:text-base-content/60"}`;
       btn.textContent = name;
       btn.dataset.panel = `insight-${key}`;
       bar.appendChild(btn);
 
       const panel = document.createElement("div");
-      panel.className = `panel-item absolute inset-0 p-3 overflow-y-auto ${i === 0 ? "block" : "hidden"}`;
+      panel.className = `panel-item absolute inset-0 px-4 py-3 overflow-y-auto ${i === 0 ? "block" : "hidden"}`;
       panel.id = `insight-${key}`;
-      panel.innerHTML = '<p class="text-xs text-base-content/40 italic">Nothing yet...</p>';
+      panel.innerHTML = '<p class="text-[13px] text-base-content/30 italic">Nothing yet...</p>';
       panels.appendChild(panel);
     });
   }
@@ -86,13 +85,17 @@ export class MnInsights extends MoaneteElement {
       const panels = this.querySelector<HTMLDivElement>(".insight-panels");
       if (!panels) return;
 
-      for (const b of bar.querySelectorAll("button")) b.classList.remove("tab-active");
+      for (const b of bar.querySelectorAll("button")) {
+        b.className =
+          "px-3 py-1.5 text-xs rounded-md transition-colors cursor-pointer text-base-content/40 hover:text-base-content/60";
+      }
       for (const p of panels.querySelectorAll<HTMLElement>(".panel-item")) {
         p.classList.add("hidden");
         p.classList.remove("block");
       }
 
-      btn.classList.add("tab-active");
+      btn.className =
+        "px-3 py-1.5 text-xs rounded-md transition-colors cursor-pointer text-base-content bg-base-content/[0.04]";
       const panel = this.querySelector<HTMLElement>(`#${btn.dataset.panel}`);
       if (panel) {
         panel.classList.remove("hidden");

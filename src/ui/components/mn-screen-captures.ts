@@ -5,10 +5,10 @@ export class MnScreenCaptures extends MoaneteElement {
   render(): void {
     this.className = "hidden";
     this.innerHTML = `
-      <div class="bg-base-100 rounded-xl border border-base-content/10 p-3">
+      <div class="px-4 py-3">
         <div class="flex items-center justify-between mb-2">
-          <h3 class="text-xs font-semibold text-primary">Screen Captures</h3>
-          <span class="capture-count badge badge-xs badge-ghost">0</span>
+          <h3 class="mn-panel-header">Screen Captures</h3>
+          <span class="capture-count text-[10px] text-base-content/30">0</span>
         </div>
         <div class="captures-grid grid grid-cols-3 gap-2 max-h-48 overflow-y-auto"></div>
       </div>

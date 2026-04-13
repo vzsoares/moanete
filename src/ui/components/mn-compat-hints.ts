@@ -2,7 +2,7 @@ import { MoaneteElement } from "../base.ts";
 
 export class MnCompatHints extends MoaneteElement {
   render(): void {
-    this.className = "flex flex-col gap-1 px-4 pt-2";
+    this.className = "flex flex-col";
     const hints = detectHints();
     for (const hint of hints) {
       this.addHint(hint);
@@ -11,8 +11,9 @@ export class MnCompatHints extends MoaneteElement {
 
   addHint(text: string): void {
     const el = document.createElement("div");
-    el.className = "alert alert-warning alert-sm py-1 px-3";
-    el.innerHTML = `<span>${text}</span><button class="btn btn-ghost btn-xs btn-circle">✕</button>`;
+    el.className =
+      "flex items-center gap-2 px-5 py-2 text-xs text-warning/80 bg-warning/[0.06] border-b border-warning/10";
+    el.innerHTML = `<span class="flex-1">${text}</span><button class="text-warning/40 hover:text-warning/70 cursor-pointer text-sm">✕</button>`;
     el.querySelector("button")!.addEventListener("click", () => el.remove());
     this.appendChild(el);
   }

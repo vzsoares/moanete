@@ -21,15 +21,15 @@ export class MnHistory extends MoaneteElement {
   render(): void {
     this.innerHTML = `
     <dialog class="modal">
-      <div class="modal-box max-w-2xl max-h-[80vh] flex flex-col">
-        <h3 class="text-lg font-bold mb-4">Session History</h3>
+      <div class="modal-box max-w-2xl max-h-[80vh] flex flex-col bg-base-100 border border-base-content/[0.06]">
+        <h3 class="text-[15px] font-semibold mb-4 text-base-content">Session History</h3>
         <div class="history-list flex-1 overflow-y-auto flex flex-col gap-2">
-          <p class="text-sm text-base-content/40 italic">No sessions yet.</p>
+          <p class="text-[13px] text-base-content/30 italic">No sessions yet.</p>
         </div>
         <div class="history-detail hidden flex-1 overflow-y-auto"></div>
-        <div class="modal-action">
-          <button class="history-back btn btn-ghost btn-sm hidden">Back</button>
-          <form method="dialog"><button class="btn btn-ghost btn-sm">Close</button></form>
+        <div class="flex items-center justify-end gap-2 pt-4 border-t border-base-content/[0.06]">
+          <button class="history-back btn btn-ghost btn-sm text-base-content/50 hidden">Back</button>
+          <form method="dialog"><button class="btn btn-ghost btn-sm text-base-content/50">Close</button></form>
         </div>
       </div>
       <form method="dialog" class="modal-backdrop"><button>close</button></form>
@@ -55,7 +55,7 @@ export class MnHistory extends MoaneteElement {
     backBtn.classList.add("hidden");
 
     if (sessions.length === 0) {
-      list.innerHTML = '<p class="text-sm text-base-content/40 italic">No sessions yet.</p>';
+      list.innerHTML = '<p class="text-[13px] text-base-content/30 italic">No sessions yet.</p>';
       return;
     }
 
@@ -71,7 +71,7 @@ export class MnHistory extends MoaneteElement {
 
       const card = document.createElement("div");
       card.className =
-        "bg-base-200 rounded-lg p-3 cursor-pointer hover:bg-base-300 transition-colors border border-base-content/5";
+        "rounded-lg p-3 cursor-pointer hover:bg-base-content/[0.03] transition-colors border border-base-content/[0.06]";
       card.innerHTML = `
         <div class="flex justify-between items-center mb-1">
           <span class="text-xs font-semibold">${date}</span>
@@ -133,8 +133,8 @@ export class MnHistory extends MoaneteElement {
     html += '<div class="mb-4 flex flex-col gap-1">';
     for (const line of s.transcript) {
       const label = line.source === "mic" ? "You" : "Them";
-      const color = line.source === "mic" ? "text-info" : "text-warning";
-      html += `<div class="text-xs"><span class="${color} font-semibold">${label}:</span> ${escapeHtml(line.text)}</div>`;
+      const speakerClass = line.source === "mic" ? "mn-speaker-you" : "mn-speaker-them";
+      html += `<div class="text-xs"><span class="${speakerClass} font-semibold">${label}:</span> <span class="text-base-content/60">${escapeHtml(line.text)}</span></div>`;
     }
     html += "</div>";
 

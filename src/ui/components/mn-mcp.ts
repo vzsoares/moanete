@@ -46,8 +46,8 @@ export class MnMcp extends MoaneteElement {
   render(): void {
     this.innerHTML = `
     <dialog class="modal">
-      <div class="modal-box max-w-2xl max-h-[80vh] flex flex-col">
-        <h3 class="text-lg font-bold mb-2">MCP Servers</h3>
+      <div class="modal-box max-w-2xl max-h-[80vh] flex flex-col bg-base-100 border border-base-content/[0.06]">
+        <h3 class="text-[15px] font-semibold mb-2 text-base-content">MCP Servers</h3>
         <p class="text-xs text-base-content/50 mb-3">
           Connect to external MCP servers for extended context.
           Requires the MCP bridge (<code class="badge badge-sm badge-ghost">just mcp</code>).

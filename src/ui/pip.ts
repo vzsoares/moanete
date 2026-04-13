@@ -51,48 +51,50 @@ export function buildPipUI(pipDoc: Document, _cssUrl: string, callbacks: PipCall
   style.textContent = PIP_CSS;
   doc.head.appendChild(style);
 
-  doc.body.setAttribute("data-theme", "dark");
+  doc.body.setAttribute("data-theme", "moanete");
   doc.body.className =
-    "h-screen flex flex-col overflow-hidden bg-base-200 text-base-content text-sm";
+    "h-screen flex flex-col overflow-hidden bg-base-100 text-base-content text-sm";
   doc.body.innerHTML = `
-    <header class="flex items-center gap-2 px-3 py-1.5 bg-base-300 border-b border-base-content/10 shrink-0">
-      <h1 class="text-sm font-semibold text-primary">moanete</h1>
+    <header class="flex items-center gap-2 px-3 py-2 border-b border-base-content/[0.06] shrink-0">
+      <span class="text-[13px] font-semibold tracking-tight text-base-content">moañete</span>
       <div class="flex-1"></div>
-      <span class="text-[10px] text-base-content/40">mic</span>
-      <span id="pip-mic-dot" class="w-2 h-2 rounded-full bg-base-content/20" title="Mic"></span>
-      <span class="text-[10px] text-base-content/40">tab</span>
-      <span id="pip-tab-dot" class="w-2 h-2 rounded-full bg-base-content/20" title="Tab"></span>
-      <button id="pip-btn-capture-once" class="btn btn-ghost btn-xs" hidden title="Capture screen once">📸</button>
-      <button id="pip-btn-screen" class="btn btn-ghost btn-xs" hidden title="Auto-capture screen">🔄</button>
+      <div class="flex items-center gap-1.5">
+        <span id="pip-mic-dot" class="dot off" title="Mic"></span>
+        <span class="text-[9px] text-base-content/30">mic</span>
+        <span id="pip-tab-dot" class="dot off" title="Tab"></span>
+        <span class="text-[9px] text-base-content/30">tab</span>
+      </div>
+      <button id="pip-btn-capture-once" class="text-[11px] text-base-content/40 hover:text-base-content/70 cursor-pointer" hidden title="Capture screen once">📸</button>
+      <button id="pip-btn-screen" class="text-[11px] text-base-content/40 hover:text-base-content/70 cursor-pointer" hidden title="Auto-capture screen">🔄</button>
       <div class="flex items-center gap-1" title="Context window usage">
-        <div class="w-10 h-1 bg-base-content/10 rounded-full overflow-hidden">
-          <div id="pip-ctx-bar" class="h-full bg-primary rounded-full transition-all" style="width: 0%"></div>
+        <div class="w-10 h-[2px] bg-base-content/[0.06] rounded-full overflow-hidden">
+          <div id="pip-ctx-bar" class="h-full bg-primary rounded-full transition-all duration-300" style="width: 0%"></div>
         </div>
-        <span id="pip-ctx-label" class="text-[9px] text-base-content/40">0%</span>
+        <span id="pip-ctx-label" class="text-[9px] text-base-content/30 tabular-nums">0%</span>
       </div>
     </header>
 
-    <div class="flex gap-1 px-3 py-1 bg-base-300 border-b border-base-content/10 shrink-0">
-      <button class="btn btn-xs btn-primary" data-view="transcript">Transcript</button>
-      <button class="btn btn-xs btn-ghost" data-view="insights">Insights</button>
-      <button class="btn btn-xs btn-ghost" data-view="chat">Chat</button>
+    <div class="flex gap-0.5 px-3 py-1.5 border-b border-base-content/[0.06] shrink-0">
+      <button class="px-2.5 py-1 text-[11px] rounded-md text-base-content bg-base-content/[0.04]" data-view="transcript">Transcript</button>
+      <button class="px-2.5 py-1 text-[11px] rounded-md text-base-content/40 hover:text-base-content/60" data-view="insights">Insights</button>
+      <button class="px-2.5 py-1 text-[11px] rounded-md text-base-content/40 hover:text-base-content/60" data-view="chat">Chat</button>
     </div>
 
-    <div id="pip-content" class="flex-1 overflow-y-auto p-3">
-      <div id="pip-transcript" class="text-xs leading-relaxed whitespace-pre-wrap text-base-content/50 italic">Waiting for speech...</div>
+    <div id="pip-content" class="flex-1 overflow-y-auto px-3 py-2">
+      <div id="pip-transcript" class="text-xs leading-relaxed whitespace-pre-wrap text-base-content/30 italic">Waiting for speech...</div>
       <div id="pip-insights" class="hidden text-xs"></div>
       <div id="pip-chat" class="hidden flex flex-col h-full">
-        <div id="pip-chat-messages" class="flex-1 overflow-y-auto flex flex-col gap-1.5 mb-2"></div>
-        <div class="flex flex-col gap-1 shrink-0">
+        <div id="pip-chat-messages" class="flex-1 overflow-y-auto flex flex-col gap-2 mb-2"></div>
+        <div class="flex flex-col gap-1.5 shrink-0">
           <div class="flex gap-1">
-            <select id="pip-chat-preset" class="select select-bordered select-xs flex-1">
+            <select id="pip-chat-preset" class="flex-1 bg-base-content/[0.04] border border-base-content/[0.08] rounded-md px-2 py-1 text-[11px] text-base-content outline-none">
               <option value="">Q&A</option>
             </select>
-            <button id="pip-chat-auto" class="btn btn-ghost btn-xs shrink-0" title="Auto-assist">Auto</button>
+            <button id="pip-chat-auto" class="px-2 py-1 text-[11px] rounded-md text-base-content/40 hover:text-base-content/60 cursor-pointer" title="Auto-assist">Auto</button>
           </div>
           <div class="flex gap-1">
-            <input type="text" id="pip-chat-input" class="input input-bordered input-xs flex-1 min-w-0" placeholder="Ask..." />
-            <button id="pip-chat-send" class="btn btn-primary btn-xs shrink-0">Send</button>
+            <input type="text" id="pip-chat-input" class="flex-1 min-w-0 bg-base-content/[0.04] border border-base-content/[0.08] rounded-md px-2.5 py-1 text-[11px] text-base-content outline-none focus:border-primary/40 placeholder:text-base-content/30" placeholder="Ask..." />
+            <button id="pip-chat-send" class="btn btn-primary btn-xs rounded-md shrink-0">Send</button>
           </div>
         </div>
       </div>
@@ -123,11 +125,10 @@ export function pipSetScreenAvailable(available: boolean, active = false): void 
   if (autoBtn) {
     (autoBtn as HTMLButtonElement).hidden = !available;
     if (active) {
-      autoBtn.classList.add("btn-accent");
-      autoBtn.classList.remove("btn-ghost");
+      autoBtn.className = "text-[11px] text-primary cursor-pointer";
     } else {
-      autoBtn.classList.remove("btn-accent");
-      autoBtn.classList.add("btn-ghost");
+      autoBtn.className =
+        "text-[11px] text-base-content/40 hover:text-base-content/70 cursor-pointer";
     }
   }
   if (onceBtn) {
@@ -138,7 +139,7 @@ export function pipSetScreenAvailable(available: boolean, active = false): void 
 function syncView(): void {
   if (!doc) return;
   for (const b of doc.querySelectorAll<HTMLButtonElement>("[data-view]")) {
-    b.className = `btn btn-xs ${b.dataset.view === currentView ? "btn-primary" : "btn-ghost"}`;
+    b.className = `px-2.5 py-1 text-[11px] rounded-md cursor-pointer transition-colors ${b.dataset.view === currentView ? "text-base-content bg-base-content/[0.04]" : "text-base-content/40 hover:text-base-content/60"}`;
   }
 
   const views = {
@@ -236,12 +237,12 @@ function setupPipChat(): void {
   autoBtn.addEventListener("click", () => {
     pipAutoActive = !pipAutoActive;
     if (pipAutoActive) {
-      autoBtn.classList.add("btn-accent");
-      autoBtn.classList.remove("btn-ghost");
+      autoBtn.className =
+        "px-2 py-1 text-[11px] rounded-md text-primary bg-primary/10 cursor-pointer";
       onAutoAssist?.(true, getPipPresetPrompt(preset));
     } else {
-      autoBtn.classList.remove("btn-accent");
-      autoBtn.classList.add("btn-ghost");
+      autoBtn.className =
+        "px-2 py-1 text-[11px] rounded-md text-base-content/40 hover:text-base-content/60 cursor-pointer";
       onAutoAssist?.(false, "");
     }
   });
@@ -259,11 +260,11 @@ function appendPipChatMessage(role: string, text: string, suggestions: string[] 
 
   const el = doc.createElement("div");
   const isUser = role === "user";
-  el.className = `text-xs leading-snug ${isUser ? "text-info" : ""}`;
+  el.className = `text-xs leading-snug ${isUser ? "" : ""}`;
   if (isUser) {
-    el.innerHTML = `<span class="font-semibold">You:</span> ${escapeHtml(text)}`;
+    el.innerHTML = `<span class="font-semibold mn-speaker-you">You:</span> <span class="text-base-content/60">${escapeHtml(text)}</span>`;
   } else {
-    el.innerHTML = `<span class="font-semibold text-success">moanete:</span><div class="mt-1">${renderMarkdown(text)}</div>`;
+    el.innerHTML = `<span class="font-semibold mn-speaker-them">moañete:</span><div class="mt-1 text-base-content/70">${renderMarkdown(text)}</div>`;
   }
   container.appendChild(el);
 
@@ -273,7 +274,7 @@ function appendPipChatMessage(role: string, text: string, suggestions: string[] 
     for (const s of suggestions) {
       const chip = doc.createElement("button");
       chip.className =
-        "btn btn-ghost btn-xs text-[10px] border border-base-content/20 rounded-full";
+        "px-2 py-0.5 text-[10px] rounded-full border border-base-content/[0.08] text-base-content/40 hover:text-base-content/60 hover:bg-base-content/[0.04] cursor-pointer transition-colors";
       chip.textContent = s;
       chip.addEventListener("click", () => {
         chips.remove();
@@ -294,7 +295,7 @@ function renderInsightsView(): void {
   container.innerHTML = "";
 
   if (currentCategories.length === 0) {
-    container.innerHTML = '<p class="text-base-content/40 italic">No insights yet...</p>';
+    container.innerHTML = '<p class="text-base-content/30 italic">No insights yet...</p>';
     return;
   }
 
@@ -304,16 +305,16 @@ function renderInsightsView(): void {
 
     const section = doc.createElement("div");
     section.className = "mb-3";
-    section.innerHTML = `<h3 class="font-semibold text-primary text-xs mb-1">${name}</h3>`;
+    section.innerHTML = `<h3 class="mn-panel-header mb-1">${name}</h3>`;
 
     if (items.length === 0) {
-      section.innerHTML += '<p class="text-base-content/40 italic">Nothing yet...</p>';
+      section.innerHTML += '<p class="text-base-content/30 italic">Nothing yet...</p>';
     } else {
       const list = doc.createElement("div");
-      list.className = "flex flex-col gap-1.5";
+      list.className = "flex flex-col gap-1";
       for (const item of items.slice(-10)) {
         const card = doc.createElement("div");
-        card.className = "bg-base-200 rounded px-2 py-1 leading-snug border-l-2 border-primary";
+        card.className = "mn-insight-card";
         card.textContent = item;
         list.appendChild(card);
       }
@@ -369,9 +370,9 @@ export function pipUpdateActivity(source: "mic" | "tab", level: number): void {
   const dot = doc.getElementById(source === "mic" ? "pip-mic-dot" : "pip-tab-dot");
   if (!dot) return;
   if (level > 0.01) {
-    dot.className = "w-2 h-2 rounded-full bg-success animate-pulse";
+    dot.className = "dot on";
   } else {
-    dot.className = "w-2 h-2 rounded-full bg-success/30";
+    dot.className = "dot off";
   }
 }
 
