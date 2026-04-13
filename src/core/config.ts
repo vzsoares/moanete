@@ -45,7 +45,7 @@ export const DEFAULTS: Config = {
   multiAgent: true,
   agentPrompts: "",
   captureMic: true,
-  captureTab: false,
+  captureTab: true,
   autoPip: true,
   customChatPrompt: "",
   autoAssistIntervalMs: 10000,
