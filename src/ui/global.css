@@ -158,6 +158,12 @@
   background: oklch(1 0 0 / 0.04);
 }
 
+/* ── Select dropdown options (fix transparent background) ── */
+select option {
+  background-color: var(--color-base-200);
+  color: var(--color-base-content);
+}
+
 /* ── Scrollbar (subtle) ──────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;

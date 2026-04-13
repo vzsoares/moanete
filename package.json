@@ -2,7 +2,7 @@
   "name": "moanete",
   "version": "0.1.0",
   "type": "module",
-  "description": "Meeting assistant engine — real-time transcription, LLM-powered insights, and MCP integration",
+  "description": "Real-time AI assistant for anything you can hear or see — transcription, insights, and Q&A in your browser",
   "exports": {
     "./core": "./src/core/index.ts",
     "./providers": "./src/providers/index.ts",

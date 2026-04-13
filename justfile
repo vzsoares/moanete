@@ -32,8 +32,8 @@ test-e2e:
 verify:
     bun run check && bun run typecheck && bun run test && bun run build
 
-# Start local Whisper STT server (CUDA by default, use device=cpu for no GPU)
-whisper model="base" device="cuda":
+# Start local Whisper STT server (CPU by default, use device=cuda for NVIDIA GPU)
+whisper model="base" device="cpu":
     uv run scripts/whisper-server.py --model "{{model}}" --device "{{device}}"
 
 # Start Ollama LLM server

@@ -28,4 +28,5 @@ mcp-servers.json
 # Playwright
 test-results/
 playwright-report/
+.playwright-mcp/
 .gstack/

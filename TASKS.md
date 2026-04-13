@@ -1,7 +1,7 @@
 ## Bugs
-- [ ] fix: most select inputs have the opened part kinda transparent and its hard to read the content
+- [x] fix: most select inputs have the opened part kinda transparent and its hard to read the content
 
-## Presentation Overhaul (Design Doc: Phase 1-2 done)
+## Presentation Overhaul (Design Doc: Phase 1 done, Phase 2 cut)
 
 ### Phase 1: Design System
 - [x] Custom DaisyUI `moanete` theme (deep charcoal palette, indigo accent, green mic/blue tab)
@@ -17,18 +17,15 @@
 - [x] Restyle PiP overlay (matching design tokens, pill view tabs)
 - [x] Subtle scrollbar styling
 
-### Phase 2: Demo Video
-- [ ] Record demo video using Playwright MCP (drive the real app)
-- [ ] Export as MP4 + animated GIF
-
-### Phase 3: README Overhaul
-- [ ] Hero section with demo video/GIF
-- [ ] "Try in 30 seconds" path
-- [ ] Feature grid with visual cards
-- [ ] MCP ecosystem highlighted
-- [ ] Screenshots of new UI
+### Phase 2: README Overhaul
+- [ ] Hero screenshot of new UI
+- [ ] Restructure with differentiated positioning (lead with unique use cases)
+- [ ] MCP ecosystem highlighted prominently
+- [ ] Screenshots of new UI (dashboard, PiP, settings, chat)
 - [ ] Collapsed config reference
-- [ ] Remove Python TUI documentation
+- [ ] Add Troubleshooting section
+- [ ] Fix Docker quick start to include Ollama by default
+- [ ] Remove "Video coming soon" placeholder
 
 ## Other
 - [ ] allow /tmp to claude use without asking
