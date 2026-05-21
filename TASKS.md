@@ -1,3 +1,5 @@
+add a id on export name to avoid naming conficts
+
 ## Bugs
 - [x] fix: most select inputs have the opened part kinda transparent and its hard to read the content
 
